@@ -33,6 +33,14 @@ type CatalogRow = {
   incident_type: string | null;
   incident_title: string | null;
   thumbnail_path: string | null;
+  wb_profit_30d: number;
+  ozon_profit_30d: number;
+  wb_ad_spend_30d: number;
+  ozon_ad_spend_30d: number;
+  wb_margin_30d: number;
+  ozon_margin_30d: number;
+  wb_drr_30d: number;
+  ozon_drr_30d: number;
 };
 
 export async function GET() {
@@ -65,6 +73,14 @@ export async function GET() {
       drr30d: Number(row.drr_30d),
       wbRevenue30d: Number(row.wb_revenue_30d),
       ozonRevenue30d: Number(row.ozon_revenue_30d),
+      wbProfit30d: Number(row.wb_profit_30d),
+      ozonProfit30d: Number(row.ozon_profit_30d),
+      wbAdSpend30d: Number(row.wb_ad_spend_30d),
+      ozonAdSpend30d: Number(row.ozon_ad_spend_30d),
+      wbMargin30d: Number(row.wb_margin_30d),
+      ozonMargin30d: Number(row.ozon_margin_30d),
+      wbDrr30d: Number(row.wb_drr_30d),
+      ozonDrr30d: Number(row.ozon_drr_30d),
       wbUnits30d: Number(row.wb_units_30d),
       ozonUnits30d: Number(row.ozon_units_30d),
       wbStock: Number(row.wb_stock),
