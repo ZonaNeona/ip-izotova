@@ -1,346 +1,970 @@
 "use client";
 
-import Image from "next/image";
-import { MarketplaceLinks } from "@/components/marketplace-links";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Bot,
+  Check,
   CheckCircle2,
   ChevronRight,
+  CircleHelp,
+  FileSearch,
+  Film,
   ImagePlus,
+  Images,
+  LoaderCircle,
   RefreshCw,
+  Save,
+  Search,
+  Send,
+  ShieldCheck,
   Sparkles,
+  Upload,
   WandSparkles,
+  X,
 } from "lucide-react";
 
-type CardPreview = {
+type CatalogItem = {
+  id: string;
+  sku: string;
+  name: string;
+  brand: string;
+  category: string;
+  thumbnailUrl: string | null;
+};
+
+type Attribute = {
+  name: string;
+  value: string;
+  source: "Каталог" | "Интернет";
+};
+
+type ResearchSource = {
+  title: string;
+  url: string;
+  verifiedFact: string;
+};
+
+type StudioContent = {
   title: string;
   description: string;
   bullets: string[];
   category: string;
   searchPhrases: string[];
-  mode: "live" | "demo";
+  attributes: Attribute[];
+  researchSummary: string;
+  researchSources: ResearchSource[];
+  visualStyle: {
+    background: string;
+    lighting: string;
+    palette: string;
+    mood: string;
+  };
 };
 
-type ImagePreview = {
+type MediaKind = "main" | "secondary" | "technical";
+
+type MediaItem = {
+  mediaId: string | null;
+  kind: MediaKind;
+  title: string;
+  aspectRatio: string;
   image: string | null;
   mode: "live" | "demo";
   cost?: number | null;
   latency?: number | null;
+  warning?: string | null;
 };
+
+type StudioTab = "content" | "media" | "attributes" | "research";
+type ChannelTarget = "both" | "wb" | "ozon";
+type VideoFormat = "vertical" | "horizontal" | "square";
+
+const mediaRoles: Array<{
+  kind: MediaKind;
+  title: string;
+  subtitle: string;
+  ratio: string;
+}> = [
+  {
+    kind: "main",
+    title: "Главная",
+    subtitle: "Чистый hero-кадр товара",
+    ratio: "1:1",
+  },
+  {
+    kind: "secondary",
+    title: "Вспомогательная",
+    subtitle: "Товар в среде использования",
+    ratio: "2:3",
+  },
+  {
+    kind: "technical",
+    title: "Техническая",
+    subtitle: "Ракурс + детали без выдуманных подписей",
+    ratio: "1:1",
+  },
+];
+
+function channelTitle(value: ChannelTarget) {
+  if (value === "wb") return "Wildberries";
+  if (value === "ozon") return "Ozon";
+  return "WB + Ozon";
+}
 
 export function ProductCardStudio({
   onGenerate,
 }: {
   onGenerate: () => void;
 }) {
-  const [productName, setProductName] = useState(
-    "Электрический чайник HeatPro X500",
-  );
-  const [brand, setBrand] = useState("HeatPro");
-  const [volume, setVolume] = useState("1,7 л");
-  const [power, setPower] = useState("2200 Вт");
-  const [features, setFeatures] = useState(
-    "Нержавеющая сталь, автоотключение, защита от включения без воды, поворотная база 360°",
-  );
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedSku, setSelectedSku] = useState("");
+  const [targetChannel, setTargetChannel] =
+    useState<ChannelTarget>("both");
+  const [researchEnabled, setResearchEnabled] = useState(false);
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [sourceName, setSourceName] = useState<string | null>(null);
-  const [preview, setPreview] = useState<CardPreview | null>(null);
-  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [fileError, setFileError] = useState<string | null>(null);
+
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [content, setContent] = useState<StudioContent | null>(null);
+  const [media, setMedia] = useState<Partial<Record<MediaKind, MediaItem>>>({});
+  const [activeTab, setActiveTab] = useState<StudioTab>("media");
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const [selectedMediaKind, setSelectedMediaKind] =
+    useState<MediaKind>("main");
+
+  const [generating, setGenerating] = useState(false);
+  const [imageBusy, setImageBusy] = useState<Partial<Record<MediaKind, boolean>>>({});
+  const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [videoFormat, setVideoFormat] =
+    useState<VideoFormat>("vertical");
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoMessage, setVideoMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/catalog", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((payload) => {
+        const items = (payload.items ?? []) as CatalogItem[];
+        setCatalog(items);
+        if (items[0]) setSelectedSku(items[0].sku);
+      })
+      .finally(() => setCatalogLoading(false));
+  }, []);
+
+  const selectedProduct = useMemo(
+    () => catalog.find((item) => item.sku === selectedSku) ?? null,
+    [catalog, selectedSku],
+  );
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+    setSourceImage(selectedProduct.thumbnailUrl);
+    setSourceName(selectedProduct.thumbnailUrl ? "Фото из каталога" : null);
+    setDraftId(null);
+    setContent(null);
+    setMedia({});
+    setSelectedMediaId(null);
+    setVideoUrl(null);
+    setError(null);
+    setSavedMessage(null);
+  }, [selectedProduct?.sku]);
+
+  const filteredCatalog = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return catalog;
+    return catalog.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) ||
+        item.sku.toLowerCase().includes(query) ||
+        item.brand.toLowerCase().includes(query),
+    );
+  }, [catalog, productSearch]);
 
   function onFile(file?: File) {
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
-      setFileError("Нужен файл изображения.");
+      setError("Нужен файл изображения.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Загрузите изображение до 5 МБ.");
       return;
     }
 
-    if (file.size > 3 * 1024 * 1024) {
-      setFileError("Для демо загрузите изображение до 3 МБ.");
-      return;
-    }
-
-    setFileError(null);
     const reader = new FileReader();
     reader.onload = () => {
       setSourceImage(typeof reader.result === "string" ? reader.result : null);
       setSourceName(file.name);
+      setError(null);
     };
     reader.readAsDataURL(file);
   }
 
-  async function generateCard() {
-    setLoading(true);
-    setFileError(null);
-
-    const imagePrompt = [
-      "Create a premium marketplace primary product image.",
-      `Product: ${productName} by ${brand}.`,
-      `Known facts: volume ${volume}; power ${power}; features: ${features}.`,
-      sourceImage
-        ? "Use the supplied product photo as the source of truth. Preserve the exact product geometry, proportions, color, controls, logo and visible details. Do not redesign the product."
-        : "Create a believable neutral product visualization without adding unprovided functions or labels.",
-      "Clean commercial studio lighting, centered product, subtle realistic shadow, light neutral background, no text, no badges, no people, no extra accessories.",
-      "Square composition suitable for a marketplace product card.",
-    ].join(" ");
+  async function generateImage(currentDraftId: string, kind: MediaKind) {
+    setImageBusy((state) => ({ ...state, [kind]: true }));
 
     try {
-      const [cardResponse, imageResponse] = await Promise.all([
-        fetch("/api/ai/product-card", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            productName,
-            brand,
-            volume,
-            power,
-            features,
-          }),
-        }),
-        fetch("/api/ai/image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: imagePrompt,
-            image: sourceImage,
-          }),
-        }),
-      ]);
+      const response = await fetch("/api/product-studio/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draftId: currentDraftId, kind }),
+      });
+      const payload = await response.json();
 
-      const [cardPayload, imagePayload] = await Promise.all([
-        cardResponse.json(),
-        imageResponse.json(),
-      ]);
-
-      if (cardResponse.ok && cardPayload.data) {
-        setPreview({ ...cardPayload.data, mode: cardPayload.mode });
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Не удалось создать изображение.");
       }
 
-      if (imageResponse.ok) {
-        setImagePreview({
-          image: imagePayload.image ?? sourceImage,
-          mode: imagePayload.mode === "live" ? "live" : "demo",
-          cost: imagePayload.cost ?? null,
-          latency: imagePayload.latency ?? null,
-        });
+      const item: MediaItem = {
+        mediaId: payload.mediaId ?? null,
+        kind,
+        title: payload.title,
+        aspectRatio: payload.aspectRatio,
+        image: payload.image ?? null,
+        mode: payload.mode === "live" ? "live" : "demo",
+        cost: payload.cost ?? null,
+        latency: payload.latency ?? null,
+        warning: payload.warning ?? null,
+      };
+
+      setMedia((state) => ({ ...state, [kind]: item }));
+
+      if (kind === "main" && item.mediaId) {
+        setSelectedMediaId(item.mediaId);
+        setSelectedMediaKind("main");
       }
 
-      onGenerate();
+      return item;
     } finally {
-      setLoading(false);
+      setImageBusy((state) => ({ ...state, [kind]: false }));
     }
   }
 
-  const imageToShow = imagePreview?.image ?? sourceImage;
+  async function generatePackage() {
+    if (!selectedProduct || generating) return;
+
+    setGenerating(true);
+    setError(null);
+    setSavedMessage(null);
+    setMedia({});
+    setVideoUrl(null);
+    setVideoMessage(null);
+
+    try {
+      const response = await fetch("/api/product-studio/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sku: selectedProduct.sku,
+          targetChannel,
+          researchEnabled,
+          sourceImage,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Не удалось создать карточку.");
+      }
+
+      setDraftId(payload.draftId);
+      setContent(payload.content);
+      setSourceImage(payload.product.sourceImageUrl ?? sourceImage);
+      setActiveTab("media");
+
+      const results = await Promise.allSettled(
+        mediaRoles.map((role) => generateImage(payload.draftId, role.kind)),
+      );
+
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length) {
+        setError(
+          `Карточка создана, но ${failed.length} изображ. не удалось сгенерировать. Их можно перегенерировать отдельно.`,
+        );
+      }
+
+      onGenerate();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось создать пакет карточки.",
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function saveDraft(status: "draft" | "review" = "draft") {
+    if (!draftId || !content || saving) return;
+
+    setSaving(true);
+    setSavedMessage(null);
+
+    try {
+      const response = await fetch("/api/product-studio/draft", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: draftId,
+          title: content.title,
+          description: content.description,
+          bullets: content.bullets,
+          attributes: content.attributes,
+          searchPhrases: content.searchPhrases,
+          status,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Не удалось сохранить карточку.");
+      }
+
+      setSavedMessage(
+        status === "review"
+          ? "Пакет отправлен на согласование."
+          : "Черновик сохранён.",
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Не удалось сохранить карточку.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function generateVideo() {
+    if (!selectedMediaId || videoBusy) return;
+
+    setVideoBusy(true);
+    setVideoMessage(null);
+
+    try {
+      const response = await fetch("/api/product-studio/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mediaId: selectedMediaId,
+          format: videoFormat,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Не удалось создать видео.");
+      }
+
+      setVideoUrl(payload.video ?? null);
+      setVideoMessage(
+        payload.video
+          ? "Видео создано и сохранено."
+          : payload.warning ?? "Видео пока недоступно.",
+      );
+    } catch (cause) {
+      setVideoMessage(
+        cause instanceof Error ? cause.message : "Не удалось создать видео.",
+      );
+    } finally {
+      setVideoBusy(false);
+    }
+  }
+
+  function updateAttribute(index: number, field: "name" | "value", value: string) {
+    if (!content) return;
+    setContent({
+      ...content,
+      attributes: content.attributes.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    });
+  }
 
   return (
-    <div className="cards-workspace">
-      <article className="card form-card">
-        <div className="card-header">
+    <div className="studio-v2">
+      <aside className="card studio-source-panel">
+        <div className="studio-panel-head">
           <div>
-            <span className="eyebrow">Новая карточка</span>
-            <h2>Исходные данные товара</h2>
+            <span className="eyebrow">Шаг 1</span>
+            <h2>Товар и источники</h2>
           </div>
-          <span className="demo-chip">ИИ + проверка</span>
+          <span className="studio-draft-chip">
+            {draftId ? "Черновик создан" : "Новый пакет"}
+          </span>
         </div>
 
-        <div className="form-grid">
-          <label>
-            Название товара
-            <input
-              value={productName}
-              onChange={(event) => setProductName(event.target.value)}
-            />
-          </label>
-          <label>
-            Бренд
-            <input
-              value={brand}
-              onChange={(event) => setBrand(event.target.value)}
-            />
-          </label>
-          <label>
-            Объём
-            <input
-              value={volume}
-              onChange={(event) => setVolume(event.target.value)}
-            />
-          </label>
-          <label>
-            Мощность
-            <input
-              value={power}
-              onChange={(event) => setPower(event.target.value)}
-            />
-          </label>
-          <label className="wide">
-            Особенности
-            <textarea
-              value={features}
-              onChange={(event) => setFeatures(event.target.value)}
-            />
-          </label>
-        </div>
-
-        <label className="upload-zone upload-label">
-          <ImagePlus size={26} />
-          <div>
-            <strong>
-              {sourceName ? "Исходное фото загружено" : "Исходное фото товара"}
-            </strong>
-            <span>
-              {sourceName ??
-                "Загрузите реальное фото — ImageRouter сохранит внешний вид товара"}
-            </span>
-          </div>
-          <span className="secondary-button">Выбрать файл</span>
+        <label className="studio-label">Товар из каталога</label>
+        <div className="studio-product-search search-box">
+          <Search size={16} />
           <input
-            className="hidden-file"
+            value={productSearch}
+            onChange={(event) => setProductSearch(event.target.value)}
+            placeholder="Название, SKU или бренд"
+          />
+        </div>
+
+        <div className="studio-product-list">
+          {catalogLoading ? (
+            <div className="studio-small-loading">
+              <LoaderCircle size={16} /> Загружаем каталог…
+            </div>
+          ) : (
+            filteredCatalog.slice(0, 12).map((item) => (
+              <button
+                key={item.id}
+                className={
+                  selectedSku === item.sku
+                    ? "studio-product-option active"
+                    : "studio-product-option"
+                }
+                onClick={() => {
+                  setSelectedSku(item.sku);
+                  setProductSearch("");
+                }}
+              >
+                <span className="studio-product-mini-thumb">
+                  {item.thumbnailUrl ? (
+                    <img src={item.thumbnailUrl} alt="" />
+                  ) : (
+                    <ImagePlus size={16} />
+                  )}
+                </span>
+                <span>
+                  <strong>{item.name}</strong>
+                  <small>{item.sku} · {item.category}</small>
+                </span>
+                {selectedSku === item.sku && <Check size={15} />}
+              </button>
+            ))
+          )}
+        </div>
+
+        {selectedProduct && (
+          <div className="studio-selected-product">
+            <span className="studio-product-preview">
+              {sourceImage ? (
+                <img src={sourceImage} alt={selectedProduct.name} />
+              ) : (
+                <ImagePlus size={28} />
+              )}
+            </span>
+            <div>
+              <strong>{selectedProduct.name}</strong>
+              <span>{selectedProduct.sku} · {selectedProduct.brand}</span>
+            </div>
+          </div>
+        )}
+
+        <label className="studio-upload">
+          <Upload size={18} />
+          <span>
+            <strong>Исходное фото</strong>
+            <small>{sourceName ?? "Можно использовать фото из каталога"}</small>
+          </span>
+          <em>Заменить</em>
+          <input
             type="file"
             accept="image/*"
             onChange={(event) => onFile(event.target.files?.[0])}
           />
         </label>
 
-        {fileError && <div className="form-error">{fileError}</div>}
-
-        {sourceImage && (
-          <div className="source-image-row">
-            <div className="source-thumb">
-              <Image
-                src={sourceImage}
-                alt="Исходное фото товара"
-                fill
-                unoptimized
-                sizes="72px"
-              />
-            </div>
-            <div>
-              <strong>Источник для генерации по исходному изображению</strong>
-              <span>
-                Геометрия и внешний вид товара должны остаться неизменными.
-              </span>
-            </div>
+        <div className="studio-field-block">
+          <label className="studio-label">Куда готовим карточку</label>
+          <div className="studio-segment">
+            {([
+              ["both", "WB + Ozon"],
+              ["wb", "WB"],
+              ["ozon", "Ozon"],
+            ] as Array<[ChannelTarget, string]>).map(([value, label]) => (
+              <button
+                key={value}
+                className={targetChannel === value ? "active" : ""}
+                onClick={() => setTargetChannel(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <label className="studio-research-toggle">
+          <input
+            type="checkbox"
+            checked={researchEnabled}
+            onChange={(event) => setResearchEnabled(event.target.checked)}
+          />
+          <span>
+            <FileSearch size={17} />
+            <span>
+              <strong>Дополнить из интернета</strong>
+              <small>
+                Только подтверждённые факты конкретной модели. Каталог всегда
+                имеет приоритет.
+              </small>
+            </span>
+          </span>
+        </label>
 
         <button
-          className="primary-button generate-button"
-          onClick={generateCard}
-          disabled={loading}
+          className="primary-button studio-generate-all"
+          onClick={generatePackage}
+          disabled={!selectedProduct || generating}
         >
-          {loading ? <RefreshCw size={17} /> : <Sparkles size={17} />}
-          {loading ? "Генерация контента и изображения..." : "Сгенерировать карточку"}
+          {generating ? (
+            <LoaderCircle size={17} className="spin" />
+          ) : (
+            <Sparkles size={17} />
+          )}
+          {generating
+            ? "Создаём пакет карточки…"
+            : "Создать текст + 3 изображения"}
         </button>
-      </article>
 
-      <article className="card preview-card">
-        {!preview && !imagePreview ? (
-          <div className="empty-preview">
-            <WandSparkles size={34} />
-            <strong>Здесь появится готовый ИИ-черновик</strong>
-            <span>
-              OpenRouter готовит структуру карточки, ImageRouter — товарное
-              изображение. Финальная публикация всегда требует проверки.
-            </span>
+        {error && <div className="studio-error">{error}</div>}
+      </aside>
+
+      <main className="card studio-workspace">
+        {!content ? (
+          <div className="studio-empty">
+            <div className="studio-empty-icon">
+              <WandSparkles size={34} />
+            </div>
+            <strong>Профессиональная студия карточки</strong>
+            <p>
+              Выберите товар слева. За один запуск система подготовит текст,
+              характеристики и три связанных изображения в едином стиле.
+            </p>
+            <div className="studio-empty-steps">
+              <span><Bot size={14} /> Описание и SEO</span>
+              <span><Images size={14} /> 3 медиароли</span>
+              <span><Film size={14} /> Видео из кадра</span>
+              <span><ShieldCheck size={14} /> Проверка фактов</span>
+            </div>
           </div>
         ) : (
           <>
-            <div className="card-header">
+            <header className="studio-workspace-head">
               <div>
                 <span className="eyebrow">
-                  Черновик · {preview?.mode === "live" ? "OpenRouter подключён" : "Демо-текст"}
+                  {channelTitle(targetChannel)} · пакет карточки
                 </span>
-                <h2>{brand} · карточка товара</h2>
-                <MarketplaceLinks sku="HP-X500-BLK" compact />
-              </div>
-              <span className="success-chip">
-                <CheckCircle2 size={14} /> Проверено
-              </span>
-            </div>
-
-            <div className="product-preview">
-              <div className="generated-product-image">
-                {imageToShow ? (
-                  <Image
-                    src={imageToShow}
-                    alt="ИИ-изображение товара"
-                    fill
-                    unoptimized
-                    sizes="220px"
-                  />
-                ) : (
-                  <div className="image-placeholder">
-                    <ImagePlus size={42} />
-                    <span>ДЕМО-ИЗОБРАЖЕНИЕ</span>
-                  </div>
-                )}
-                <div className="image-mode-badge">
-                  {imagePreview?.mode === "live"
-                    ? "ImageRouter подключён"
-                    : sourceImage
-                      ? "Исходное изображение · демо"
-                      : "Демо-изображение"}
-                </div>
-              </div>
-
-              <div>
-                <span className="category-line">
-                  {preview?.category ?? "Бытовая техника · Электрические чайники"}
-                </span>
-                <h3>
-                  {preview?.title ??
-                    "Электрический чайник HeatPro X500, 1,7 л, 2200 Вт"}
-                </h3>
+                <h2>{selectedProduct?.name}</h2>
                 <p>
-                  {preview?.description ??
-                    "Практичный электрический чайник для ежедневного использования."}
+                  {draftId ? `Черновик ${draftId.slice(0, 8)}` : "Черновик"} ·{" "}
+                  {researchEnabled ? "с web‑проверкой" : "по данным каталога"}
                 </p>
-                <ul>
-                  {(preview?.bullets ?? [
-                    `Объём: ${volume}`,
-                    `Мощность: ${power}`,
-                    "Автоматическое отключение",
-                  ]).map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
               </div>
-            </div>
+              <div className="studio-head-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => saveDraft("draft")}
+                  disabled={saving}
+                >
+                  <Save size={15} />
+                  Сохранить
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() => saveDraft("review")}
+                  disabled={saving}
+                >
+                  <Send size={15} />
+                  На согласование
+                </button>
+              </div>
+            </header>
 
-            {imagePreview?.mode === "live" && (
-              <div className="generation-meta">
-                <span>Генерация ImageRouter</span>
-                {typeof imagePreview.latency === "number" && (
-                  <span>{(imagePreview.latency / 1000).toFixed(1)} сек.</span>
-                )}
-                {typeof imagePreview.cost === "number" && (
-                  <span>${imagePreview.cost.toFixed(4)}</span>
-                )}
+            {savedMessage && (
+              <div className="studio-success">
+                <CheckCircle2 size={15} /> {savedMessage}
               </div>
             )}
 
-            <div className="validation-row">
-              <span>
-                <CheckCircle2 size={15} /> Обязательные поля заполнены
-              </span>
-              <span>
-                <CheckCircle2 size={15} /> Неподтверждённые свойства не добавляем
-              </span>
-              <span>
-                <CheckCircle2 size={15} /> Требуется human approval
-              </span>
-            </div>
+            <nav className="studio-tabs">
+              {([
+                ["media", "Медиа", Images],
+                ["content", "Описание", Bot],
+                ["attributes", "Характеристики", ShieldCheck],
+                ["research", "Источники", FileSearch],
+              ] as Array<[StudioTab, string, typeof Images]>).map(
+                ([value, label, Icon]) => (
+                  <button
+                    key={value}
+                    className={activeTab === value ? "active" : ""}
+                    onClick={() => setActiveTab(value)}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </button>
+                ),
+              )}
+            </nav>
 
-            <button className="primary-button">
-              Отправить на согласование
-              <ChevronRight size={16} />
-            </button>
+            <div className="studio-tab-body">
+              {activeTab === "media" && (
+                <div className="studio-media-tab">
+                  <div className="studio-section-title">
+                    <div>
+                      <span className="eyebrow">Шаг 2</span>
+                      <h3>Три изображения в одном стиле</h3>
+                    </div>
+                    <span>
+                      Нажмите на кадр, чтобы использовать его для видео
+                    </span>
+                  </div>
+
+                  <div className="studio-media-grid">
+                    {mediaRoles.map((role) => {
+                      const item = media[role.kind];
+                      const busy = Boolean(imageBusy[role.kind]);
+                      const selected = selectedMediaKind === role.kind;
+
+                      return (
+                        <article
+                          className={
+                            selected
+                              ? "studio-media-card selected"
+                              : "studio-media-card"
+                          }
+                          key={role.kind}
+                          onClick={() => {
+                            setSelectedMediaKind(role.kind);
+                            if (item?.mediaId) setSelectedMediaId(item.mediaId);
+                          }}
+                        >
+                          <div className="studio-media-card-head">
+                            <div>
+                              <strong>{role.title}</strong>
+                              <span>{role.subtitle}</span>
+                            </div>
+                            <i>{role.ratio}</i>
+                          </div>
+
+                          <div className="studio-media-frame">
+                            {busy ? (
+                              <div className="studio-media-loading">
+                                <LoaderCircle size={24} className="spin" />
+                                <span>Генерируем…</span>
+                              </div>
+                            ) : item?.image ? (
+                              <img src={item.image} alt={role.title} />
+                            ) : (
+                              <div className="studio-media-placeholder">
+                                <ImagePlus size={28} />
+                                <span>Нет изображения</span>
+                              </div>
+                            )}
+                            {selected && item?.image && (
+                              <span className="studio-selected-badge">
+                                <Check size={12} /> Для видео
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="studio-media-card-foot">
+                            <span>
+                              {item?.mode === "live"
+                                ? "Сгенерировано"
+                                : item?.image
+                                  ? "Резервный кадр"
+                                  : "Ожидает генерации"}
+                            </span>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (draftId) generateImage(draftId, role.kind);
+                              }}
+                              disabled={busy || !draftId}
+                            >
+                              <RefreshCw size={13} />
+                              {item?.image ? "Перегенерировать" : "Создать"}
+                            </button>
+                          </div>
+
+                          {item?.warning && (
+                            <div className="studio-media-warning">
+                              {item.warning}
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  <section className="studio-video-card">
+                    <div className="studio-video-head">
+                      <div className="studio-video-icon">
+                        <Film size={20} />
+                      </div>
+                      <div>
+                        <span className="eyebrow">Шаг 3</span>
+                        <h3>Видео из выбранного кадра</h3>
+                        <p>
+                          Источник:{" "}
+                          {mediaRoles.find(
+                            (item) => item.kind === selectedMediaKind,
+                          )?.title ?? "Главная"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="studio-video-controls">
+                      <div className="studio-segment video">
+                        {([
+                          ["vertical", "9:16"],
+                          ["square", "1:1"],
+                          ["horizontal", "16:9"],
+                        ] as Array<[VideoFormat, string]>).map(
+                          ([value, label]) => (
+                            <button
+                              key={value}
+                              className={videoFormat === value ? "active" : ""}
+                              onClick={() => setVideoFormat(value)}
+                            >
+                              {label}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                      <button
+                        className="primary-button"
+                        onClick={generateVideo}
+                        disabled={!selectedMediaId || videoBusy}
+                      >
+                        {videoBusy ? (
+                          <LoaderCircle size={15} className="spin" />
+                        ) : (
+                          <Film size={15} />
+                        )}
+                        {videoBusy ? "Создаём видео…" : "Создать видео"}
+                      </button>
+                    </div>
+
+                    {videoUrl && (
+                      <div className="studio-video-preview">
+                        <video src={videoUrl} controls playsInline />
+                      </div>
+                    )}
+                    {videoMessage && (
+                      <div className="studio-video-message">{videoMessage}</div>
+                    )}
+                  </section>
+                </div>
+              )}
+
+              {activeTab === "content" && (
+                <div className="studio-content-tab">
+                  <label>
+                    <span>Заголовок</span>
+                    <input
+                      value={content.title}
+                      onChange={(event) =>
+                        setContent({ ...content, title: event.target.value })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    <span>Описание</span>
+                    <textarea
+                      value={content.description}
+                      onChange={(event) =>
+                        setContent({
+                          ...content,
+                          description: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+
+                  <div className="studio-editor-block">
+                    <div className="studio-editor-head">
+                      <strong>Преимущества</strong>
+                      <button
+                        onClick={() =>
+                          setContent({
+                            ...content,
+                            bullets: [...content.bullets, "Новый пункт"],
+                          })
+                        }
+                      >
+                        + Добавить
+                      </button>
+                    </div>
+                    <div className="studio-bullet-list">
+                      {content.bullets.map((bullet, index) => (
+                        <div key={index}>
+                          <span>{index + 1}</span>
+                          <input
+                            value={bullet}
+                            onChange={(event) =>
+                              setContent({
+                                ...content,
+                                bullets: content.bullets.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? event.target.value
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                          <button
+                            onClick={() =>
+                              setContent({
+                                ...content,
+                                bullets: content.bullets.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
+                              })
+                            }
+                            aria-label="Удалить"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="studio-editor-block">
+                    <div className="studio-editor-head">
+                      <strong>Поисковые фразы</strong>
+                    </div>
+                    <div className="studio-search-tags">
+                      {content.searchPhrases.map((phrase) => (
+                        <span key={phrase}>{phrase}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "attributes" && (
+                <div className="studio-attributes-tab">
+                  <div className="studio-section-title">
+                    <div>
+                      <span className="eyebrow">Факты товара</span>
+                      <h3>Характеристики</h3>
+                    </div>
+                    <span>
+                      Источник каждого значения хранится отдельно
+                    </span>
+                  </div>
+
+                  <div className="studio-attribute-table">
+                    <div className="studio-attribute-row head">
+                      <span>Характеристика</span>
+                      <span>Значение</span>
+                      <span>Источник</span>
+                    </div>
+                    {content.attributes.map((attribute, index) => (
+                      <div className="studio-attribute-row" key={index}>
+                        <input
+                          value={attribute.name}
+                          onChange={(event) =>
+                            updateAttribute(index, "name", event.target.value)
+                          }
+                        />
+                        <input
+                          value={attribute.value}
+                          onChange={(event) =>
+                            updateAttribute(index, "value", event.target.value)
+                          }
+                        />
+                        <span
+                          className={
+                            attribute.source === "Интернет"
+                              ? "studio-source-tag web"
+                              : "studio-source-tag catalog"
+                          }
+                        >
+                          {attribute.source}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "research" && (
+                <div className="studio-research-tab">
+                  <div className="studio-research-summary">
+                    <FileSearch size={20} />
+                    <div>
+                      <span className="eyebrow">Проверка источников</span>
+                      <h3>
+                        {researchEnabled
+                          ? "Web‑research включён"
+                          : "Только внутренний каталог"}
+                      </h3>
+                      <p>{content.researchSummary}</p>
+                    </div>
+                  </div>
+
+                  {content.researchSources.length > 0 ? (
+                    <div className="studio-research-sources">
+                      {content.researchSources.map((source) => (
+                        <a
+                          key={source.url}
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          <FileSearch size={15} />
+                          <span>
+                            <strong>{source.title}</strong>
+                            <small>{source.verifiedFact}</small>
+                          </span>
+                          <ChevronRight size={15} />
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="studio-no-sources">
+                      <CircleHelp size={21} />
+                      <strong>Внешние источники не использованы</strong>
+                      <span>
+                        Это нормально: для demo‑товаров система не добавляет
+                        характеристики, которые не удалось подтвердить.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="studio-visual-dna">
+                    <span className="eyebrow">Единый стиль медиа</span>
+                    <div>
+                      <span>
+                        <strong>Фон</strong>
+                        {content.visualStyle.background}
+                      </span>
+                      <span>
+                        <strong>Свет</strong>
+                        {content.visualStyle.lighting}
+                      </span>
+                      <span>
+                        <strong>Палитра</strong>
+                        {content.visualStyle.palette}
+                      </span>
+                      <span>
+                        <strong>Характер</strong>
+                        {content.visualStyle.mood}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
-      </article>
+      </main>
     </div>
   );
 }

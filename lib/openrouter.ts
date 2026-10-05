@@ -11,6 +11,7 @@ type OpenRouterJsonOptions<T> = {
   system: string;
   user: string;
   fallback: T;
+  webSearch?: boolean;
 };
 
 export async function openRouterJson<T>({
@@ -19,6 +20,7 @@ export async function openRouterJson<T>({
   system,
   user,
   fallback,
+  webSearch = false,
 }: OpenRouterJsonOptions<T>): Promise<OpenRouterResult<T>> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -49,6 +51,19 @@ export async function openRouterJson<T>({
         provider: {
           require_parameters: true,
         },
+        ...(webSearch
+          ? {
+              tools: [
+                {
+                  type: "openrouter:web_search",
+                  parameters: {
+                    engine: "auto",
+                    max_results: 4,
+                  },
+                },
+              ],
+            }
+          : {}),
         response_format: {
           type: "json_schema",
           json_schema: {
