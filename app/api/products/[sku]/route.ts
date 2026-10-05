@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseSelect } from "@/lib/supabase-rest";
+import { mediaProxyUrl } from "@/lib/media-url";
 
 type ProductRow = {
   id: string;
@@ -205,7 +206,7 @@ export async function GET(
       launchDate: product.launch_date,
       warrantyMonths: product.warranty_months,
       thumbnailUrl: product.thumbnail_path
-        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(product.thumbnail_path)}`
+        ? mediaProxyUrl("product-thumbnails", product.thumbnail_path)
         : null,
     },
     channels: metricGroups.map(({ channel, metrics }) => {
