@@ -5,6 +5,7 @@ import { ProductCardStudio } from "@/components/product-card-studio";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { ProductCatalog } from "@/components/product-catalog";
 import { MarketplaceLinks } from "@/components/marketplace-links";
+import { AdvertisingCenter } from "@/components/advertising-center";
 import {
   Activity,
   AlertTriangle,
@@ -396,12 +397,7 @@ export function ControlCenter() {
             />
           )}
           {section === "products" && <ProductCatalog />}
-          {section === "advertising" && (
-            <Advertising
-              campaigns={filteredCampaigns}
-              onApply={applyBid}
-            />
-          )}
+          {section === "advertising" && <AdvertisingCenter />}
           {section === "reviews" && (
             <Reviews items={reviews} sent={sentReviews} onSend={sendReview} />
           )}
