@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MarketplaceLinks } from "@/components/marketplace-links";
 import {
   CheckCircle2,
   ChevronRight,
@@ -634,6 +635,11 @@ export function WbSandboxLab() {
                 <span>
                   {createdCard.vendorCode} · {selected.subjectName}
                 </span>
+                <MarketplaceLinks
+                  sku={internalSku}
+                  wbId={createdCard.nmID || null}
+                  compact
+                />
               </div>
               <div className="wb-create-result-data">
                 <div>
