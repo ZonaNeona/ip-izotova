@@ -11,6 +11,7 @@ type ProductRow = {
   base_cost: number;
   launch_date: string | null;
   warranty_months: number;
+  thumbnail_path: string | null;
 };
 
 type ChannelRow = {
@@ -199,6 +200,9 @@ export async function GET(
       baseCost: Number(product.base_cost),
       launchDate: product.launch_date,
       warrantyMonths: product.warranty_months,
+      thumbnailUrl: product.thumbnail_path
+        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(product.thumbnail_path)}`
+        : null,
     },
     channels: metricGroups.map(({ channel, metrics }) => {
       const def = channelDefById.get(channel.channel_id);
