@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseSelect } from "@/lib/supabase-rest";
+import { mediaProxyUrl } from "@/lib/media-url";
 
 type ProductRow = {
   id: string;
@@ -103,7 +104,7 @@ export async function GET() {
           sku: product?.sku ?? "—",
           name: product?.name ?? "Неизвестный товар",
           thumbnailUrl: product?.thumbnail_path
-            ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(product.thumbnail_path)}`
+            ? mediaProxyUrl("product-thumbnails", product.thumbnail_path)
             : null,
         },
         channel: {
