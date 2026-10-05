@@ -6,6 +6,7 @@ import { IntegrationsPanel } from "@/components/integrations-panel";
 import { ProductCatalog } from "@/components/product-catalog";
 import { MarketplaceLinks } from "@/components/marketplace-links";
 import { AdvertisingCenter } from "@/components/advertising-center";
+import { ReviewsCenter } from "@/components/reviews-center";
 import {
   Activity,
   AlertTriangle,
@@ -71,7 +72,7 @@ const menu: Array<{
   { id: "overview", label: "Обзор", icon: LayoutDashboard },
   { id: "products", label: "Товары", icon: PackageCheck, badge: "100" },
   { id: "advertising", label: "Реклама и ставки", icon: Gauge, badge: "3" },
-  { id: "reviews", label: "Отзывы и вопросы", icon: MessageSquareText, badge: "3" },
+  { id: "reviews", label: "Отзывы", icon: MessageSquareText, badge: "141" },
   { id: "cards", label: "Карточки товаров", icon: ImagePlus },
   { id: "inventory", label: "Остатки и поставки", icon: Boxes, badge: "4" },
   { id: "economics", label: "Юнит-экономика", icon: CircleDollarSign },
@@ -94,8 +95,8 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
     subtitle: "Детерминированные метрики, рекомендации и подтверждение действий",
   },
   reviews: {
-    title: "Отзывы и вопросы",
-    subtitle: "ИИ готовит ответы, правила определяют уровень автономности",
+    title: "Отзывы",
+    subtitle: "Обработка обратной связи · Wildberries + Ozon · ИИ-черновики и контроль ответов",
   },
   cards: {
     title: "Карточки товаров",
@@ -398,9 +399,7 @@ export function ControlCenter() {
           )}
           {section === "products" && <ProductCatalog />}
           {section === "advertising" && <AdvertisingCenter />}
-          {section === "reviews" && (
-            <Reviews items={reviews} sent={sentReviews} onSend={sendReview} />
-          )}
+          {section === "reviews" && <ReviewsCenter />}
           {section === "cards" && (
             <ProductCardStudio
               onGenerate={() => {
