@@ -64,8 +64,8 @@ export function IntegrationsPanel() {
 
   const integrations = [
     {
-      name: "Wildberries Sandbox",
-      subtitle: "Реальный API-контур для Content, Prices, Statistics, Promotion и Feedbacks",
+      name: "Wildberries · песочница",
+      subtitle: "Реальный тестовый API-контур: карточки, цены, статистика, реклама и отзывы",
       status: status?.wildberries ? "Токен задан" : "Токен не задан",
       connected: Boolean(status?.wildberries),
       icon: "WB",
@@ -73,24 +73,24 @@ export function IntegrationsPanel() {
     },
     {
       name: "Ozon",
-      subtitle: "Вторая площадка: продажи, остатки и P&L пока на demo-данных",
-      status: "Demo channel",
+      subtitle: "Вторая площадка: продажи, остатки и прибыль пока на демо-данных",
+      status: "Демо-канал",
       connected: true,
       icon: "OZ",
       tone: "blue",
     },
     {
       name: "Supabase",
-      subtitle: "Основная demo-БД, audit log и multi-channel data layer",
-      status: status?.supabase ? "Connected" : "Fallback",
+      subtitle: "Основная демо-база, журнал действий и слой данных по каналам",
+      status: status?.supabase ? "Подключено" : "Резервный режим",
       connected: Boolean(status?.supabase),
       icon: "DB",
       tone: "green",
     },
     {
       name: "OpenRouter",
-      subtitle: "Тексты карточек, отзывы, объяснения и AI-рекомендации",
-      status: status?.openrouter ? "Connected" : "Ключ не задан",
+      subtitle: "Тексты карточек, отзывы, объяснения и ИИ-рекомендации",
+      status: status?.openrouter ? "Подключено" : "Ключ не задан",
       connected: Boolean(status?.openrouter),
       icon: "AI",
       tone: "cyan",
@@ -98,15 +98,15 @@ export function IntegrationsPanel() {
     {
       name: "ImageRouter",
       subtitle: "Изображения и медиа для карточек товаров",
-      status: status?.imagerouter ? "Connected" : "Ключ не задан",
+      status: status?.imagerouter ? "Подключено" : "Ключ не задан",
       connected: Boolean(status?.imagerouter),
       icon: "IMG",
       tone: "pink",
     },
     {
       name: "Telegram",
-      subtitle: "Финальный слой: approvals, уведомления и быстрые команды",
-      status: status?.telegram ? "Connected" : "Запланировано",
+      subtitle: "Финальный слой: согласования, уведомления и быстрые команды",
+      status: status?.telegram ? "Подключено" : "Запланировано",
       connected: Boolean(status?.telegram),
       icon: "TG",
       tone: "yellow",
@@ -141,11 +141,11 @@ export function IntegrationsPanel() {
         <div className="card-header">
           <div>
             <span className="eyebrow">
-              <ShieldCheck size={14} /> Connection test
+              <ShieldCheck size={14} /> Проверка соединения
             </span>
-            <h2>Wildberries Sandbox</h2>
+            <h2>Wildberries · песочница</h2>
             <p>
-              Read-only ping-проверка. Тест не создаёт карточки, кампании,
+              Проверка доступности без записи. Тест не создаёт карточки, кампании,
               отзывы или поставки.
             </p>
           </div>
@@ -165,7 +165,7 @@ export function IntegrationsPanel() {
             <div>
               <strong>Токен ещё не проверялся из интерфейса</strong>
               <span>
-                Нажмите кнопку — система проверит пять sandbox-hosts и сохранит
+                Нажмите кнопку — система проверит пять тестовых сервисов и сохранит
                 безопасный результат в Supabase.
               </span>
             </div>
@@ -189,7 +189,7 @@ export function IntegrationsPanel() {
               </div>
               <div>
                 <span>Режим</span>
-                <strong>{wbCheck.mode}</strong>
+                <strong>{wbCheck.mode === "sandbox" ? "Песочница" : wbCheck.mode}</strong>
               </div>
               <div>
                 <span>Проверено</span>
@@ -209,10 +209,10 @@ export function IntegrationsPanel() {
                 >
                   <div className="wb-service-top">
                     <strong>{item.category}</strong>
-                    <span>{item.ok ? "200 / OK" : `HTTP ${item.status}`}</span>
+                    <span>{item.ok ? "200 / доступно" : `HTTP ${item.status}`}</span>
                   </div>
                   <small>{item.host}</small>
-                  {!item.ok && <p>{item.error ?? "Connection error"}</p>}
+                  {!item.ok && <p>{item.error ?? "Ошибка соединения"}</p>}
                 </div>
               ))}
             </div>
