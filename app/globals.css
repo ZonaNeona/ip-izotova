@@ -3486,3 +3486,32 @@ button:disabled {
     grid-template-columns: 72px 1fr 78px;
   }
 }
+
+
+.catalog-product-mark.has-image {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ece8ee;
+}
+
+.catalog-product-mark.has-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #fff;
+}
+
+.p360-product-avatar {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ece7ef;
+}
+
+.p360-product-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #fff;
+}
