@@ -1815,3 +1815,262 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+.wb-lab {
+  padding: 20px;
+}
+
+.wb-lab .card-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.wb-lab-search {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.wb-lab-searchbox {
+  max-width: none;
+  flex: 1;
+}
+
+.wb-lab-layout {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(420px, 1.2fr);
+  gap: 12px;
+}
+
+.wb-subject-panel,
+.wb-char-panel {
+  border: 1px solid #ece8ee;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.panel-title {
+  min-height: 44px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #faf9fb;
+  border-bottom: 1px solid #eeebf0;
+}
+
+.panel-title span {
+  color: #6d6571;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.panel-title strong {
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f3e9f6;
+  color: #8b2b92;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+}
+
+.wb-lab-placeholder {
+  min-height: 170px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.wb-subject-list {
+  max-height: 470px;
+  overflow: auto;
+}
+
+.wb-subject-row {
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-top: 1px solid #f0edf2;
+  background: #fff;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+}
+
+.wb-subject-row:first-child {
+  border-top: 0;
+}
+
+.wb-subject-row:hover {
+  background: #fcf8fd;
+}
+
+.wb-subject-row.active {
+  background: #f9eefb;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.wb-subject-row strong,
+.wb-subject-row small {
+  display: block;
+}
+
+.wb-subject-row strong {
+  color: #3e3743;
+  font-size: 10px;
+}
+
+.wb-subject-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.subject-id {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8f5897;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.wb-schema-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid #efecf1;
+}
+
+.wb-schema-summary > div {
+  padding: 12px;
+  border-left: 1px solid #efecf1;
+}
+
+.wb-schema-summary > div:first-child {
+  border-left: 0;
+}
+
+.wb-schema-summary span,
+.wb-schema-summary strong {
+  display: block;
+}
+
+.wb-schema-summary span {
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.wb-schema-summary strong {
+  margin-top: 5px;
+  font-size: 9px;
+}
+
+.wb-char-list {
+  max-height: 430px;
+  overflow: auto;
+}
+
+.wb-char-row {
+  min-height: 54px;
+  padding: 10px 12px;
+  border-top: 1px solid #f0edf2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wb-char-row:first-child {
+  border-top: 0;
+}
+
+.wb-char-row.required {
+  background: #fcf8fd;
+}
+
+.wb-char-row strong,
+.wb-char-row small {
+  display: block;
+}
+
+.wb-char-row strong {
+  font-size: 9px;
+}
+
+.wb-char-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.wb-char-tags {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.wb-char-tags > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #f5f2f6;
+  color: #766d79;
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.wb-char-tags .required-chip {
+  color: #8c258f;
+  background: #f7e9fa;
+}
+
+@media (max-width: 1000px) {
+  .wb-lab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-schema-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .wb-lab-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wb-schema-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-schema-summary > div {
+    border-left: 0;
+    border-top: 1px solid #efecf1;
+  }
+
+  .wb-schema-summary > div:first-child {
+    border-top: 0;
+  }
+}
