@@ -49,9 +49,16 @@ type CatalogItem = {
   wbReviews: number;
   ozonReviews: number;
   growth: number;
+  wbGrowth: number;
+  ozonGrowth: number;
   severity: string | null;
   incidentType: string | null;
   incidentTitle: string | null;
+  incidentChannel: string | null;
+  wbSeverity: string | null;
+  wbIncidentTitle: string | null;
+  ozonSeverity: string | null;
+  ozonIncidentTitle: string | null;
   thumbnailUrl: string | null;
 };
 
@@ -131,6 +138,20 @@ export function ProductCatalog() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
+    const getSeverity = (item: CatalogItem) =>
+      channel === "wb"
+        ? item.wbSeverity
+        : channel === "ozon"
+          ? item.ozonSeverity
+          : item.severity;
+
+    const getGrowth = (item: CatalogItem) =>
+      channel === "wb"
+        ? item.wbGrowth
+        : channel === "ozon"
+          ? item.ozonGrowth
+          : item.growth;
+
     const result = items.filter((item) => {
       if (
         query &&
@@ -142,7 +163,7 @@ export function ProductCatalog() {
       }
 
       if (category !== "all" && item.category !== category) return false;
-      if (problemsOnly && !item.severity) return false;
+      if (problemsOnly && !getSeverity(item)) return false;
       return true;
     });
 
@@ -161,7 +182,7 @@ export function ProductCatalog() {
           : item.wbStock + item.ozonStock;
 
     const getter = (item: CatalogItem) => {
-      if (sort === "growth") return item.growth;
+      if (sort === "growth") return getGrowth(item);
       if (sort === "margin") {
         return channel === "wb"
           ? item.wbMargin30d
@@ -232,7 +253,13 @@ export function ProductCatalog() {
       units,
       margin: revenue ? (profit / revenue) * 100 : 0,
       drr: revenue ? (ad / revenue) * 100 : 0,
-      issues: items.filter((item) => item.severity).length,
+      issues: items.filter((item) =>
+        channel === "wb"
+          ? item.wbSeverity
+          : channel === "ozon"
+            ? item.ozonSeverity
+            : item.severity,
+      ).length,
     };
   }, [items, channel]);
 
@@ -432,6 +459,24 @@ export function ProductCatalog() {
                   : channel === "ozon"
                     ? item.ozonDrr30d
                     : item.drr30d;
+              const growth =
+                channel === "wb"
+                  ? item.wbGrowth
+                  : channel === "ozon"
+                    ? item.ozonGrowth
+                    : item.growth;
+              const severity =
+                channel === "wb"
+                  ? item.wbSeverity
+                  : channel === "ozon"
+                    ? item.ozonSeverity
+                    : item.severity;
+              const incidentTitle =
+                channel === "wb"
+                  ? item.wbIncidentTitle
+                  : channel === "ozon"
+                    ? item.ozonIncidentTitle
+                    : item.incidentTitle;
 
               return (
                 <div
@@ -492,14 +537,14 @@ export function ProductCatalog() {
                     <b className={stock < 20 ? "catalog-bad" : ""}>{stock}</b>
                   </div>
 
-                  <div className={item.growth >= 0 ? "catalog-cell catalog-growth positive" : "catalog-cell catalog-growth negative"}>
-                    {item.growth > 0 ? "+" : ""}{item.growth.toFixed(1)}%
+                  <div className={growth >= 0 ? "catalog-cell catalog-growth positive" : "catalog-cell catalog-growth negative"}>
+                    {growth > 0 ? "+" : ""}{growth.toFixed(1)}%
                   </div>
 
                   <div className="catalog-cell catalog-status-cell">
-                    {item.severity ? (
-                      <span className={`catalog-issue ${item.severity}`}>
-                        {item.incidentTitle}
+                    {severity ? (
+                      <span className={`catalog-issue ${severity}`}>
+                        {incidentTitle}
                       </span>
                     ) : (
                       <span className="catalog-ok">Норма</span>
