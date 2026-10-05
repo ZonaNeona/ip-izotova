@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { MarketplaceLinks } from "@/components/marketplace-links";
+import { ModalPortal } from "@/components/modal-portal";
 
 type DailyMetric = {
   date: string;
@@ -717,6 +718,7 @@ export function AdvertisingCenter() {
       </section>
 
       {selected && selectedStats && (
+        <ModalPortal>
         <div
           className="ad-modal-backdrop"
           role="presentation"
@@ -864,6 +866,7 @@ export function AdvertisingCenter() {
             </div>
           </section>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
