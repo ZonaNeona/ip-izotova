@@ -12,19 +12,19 @@ import {
   Sparkles,
 } from "lucide-react";
 
-type Subject = {
-  subjectID: number;
+тип Subject = {
+  ID предмета: number;
   parentID: number;
   subjectName: string;
   parentName: string;
 };
 
-type Characteristic = {
+тип Characteristic = {
   charcID: number;
   subjectName: string;
-  subjectID: number;
+  ID предмета: number;
   name: string;
-  required: boolean;
+  обязательно: boolean;
   isRequiredForCreate?: boolean;
   hasFilter?: boolean;
   existNamedField?: boolean;
@@ -34,22 +34,22 @@ type Characteristic = {
   charcType?: number;
 };
 
-type ApiPayload<T> = {
+тип ApiPayload<T> = {
   data?: T;
   error?: boolean | string;
   errorText?: string;
   additionalErrors?: unknown;
 };
 
-type CreatedCard = {
+тип CreatedCard = {
   nmID: number;
   vendorCode: string;
-  subjectID: number;
+  ID предмета: number;
   subjectName?: string | null;
   title?: string;
   brand?: string;
-  chrtID?: number | null;
-  barcode?: string | null;
+  ID варианта?: number | null;
+  штрихкод?: string | null;
 };
 
 function buildVendorCode() {
@@ -82,29 +82,29 @@ export function WbSandboxLab() {
   const [createdCard, setCreatedCard] = useState<CreatedCard | null>(null);
   const [creationVerified, setCreationVerified] = useState(false);
 
-  const required = useMemo(
+  const обязательно = useMemo(
     () =>
-      characteristics.filter(
-        (item) => item.required || item.isRequiredForCreate,
+      characteristics.фильтр(
+        (item) => item.обязательно || item.isRequiredForCreate,
       ),
     [characteristics],
   );
 
   const keyRequired = useMemo(
     () =>
-      characteristics.filter(
-        (item) => item.required && item.hasFilter,
+      characteristics.фильтр(
+        (item) => item.обязательно && item.hasFilter,
       ),
     [characteristics],
   );
 
   const formCharacteristics = useMemo(
     () =>
-      characteristics.filter(
+      characteristics.фильтр(
         (item) =>
           !item.existNamedField &&
           item.charcType !== 0 &&
-          (item.required || item.isRequiredForCreate),
+          (item.обязательно || item.isRequiredForCreate),
       ),
     [characteristics],
   );
@@ -153,7 +153,7 @@ export function WbSandboxLab() {
 
     try {
       const response = await fetch(
-        `/api/integrations/wb/catalog?type=characteristics&subjectId=${subject.subjectID}`,
+        `/api/integrations/wb/catalog?type=characteristics&subjectId=${subject.ID предмета}`,
         { cache: "no-store" },
       );
       const payload = (await response.json()) as ApiPayload<Characteristic[]>;
@@ -182,7 +182,7 @@ export function WbSandboxLab() {
     setCreatedCard(null);
     setCreationVerified(false);
 
-    const missing = formCharacteristics.filter(
+    const missing = formCharacteristics.фильтр(
       (item) => !charValues[item.charcID]?.trim(),
     );
 
@@ -227,7 +227,7 @@ export function WbSandboxLab() {
         value: raw
           .split(",")
           .map((value) => value.trim())
-          .filter(Boolean),
+          .фильтр(Boolean),
       };
     });
 
@@ -252,7 +252,7 @@ export function WbSandboxLab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           internalSku,
-          subjectId: selected.subjectID,
+          subjectId: selected.ID предмета,
           vendorCode,
           title,
           description,
@@ -268,17 +268,17 @@ export function WbSandboxLab() {
         const missingNames = Array.isArray(payload.missing)
           ? payload.missing
               .map((item: { name?: string }) => item.name)
-              .filter(Boolean)
+              .фильтр(Boolean)
               .join(", ")
           : "";
 
         setCreateError(
           [
-            payload.error ?? "WB Sandbox отклонил создание карточки.",
+            payload.error ?? "Песочница WB отклонила создание карточки.",
             payload.errorText,
             missingNames ? `Не заполнено: ${missingNames}` : null,
           ]
-            .filter(Boolean)
+            .фильтр(Boolean)
             .join(" · "),
         );
         return;
@@ -291,16 +291,16 @@ export function WbSandboxLab() {
         setCreatedCard({
           nmID: 0,
           vendorCode: payload.vendorCode ?? vendorCode,
-          subjectID: selected.subjectID,
+          ID предмета: selected.ID предмета,
           subjectName: selected.subjectName,
           title,
           brand,
-          barcode: payload.barcode ?? null,
-          chrtID: null,
+          штрихкод: payload.штрихкод ?? null,
+          ID варианта: null,
         });
       }
     } catch {
-      setCreateError("Не удалось выполнить write-test WB Sandbox.");
+      setCreateError("Не удалось выполнить тестовую запись в песочницу WB.");
     } finally {
       setCreating(false);
     }
@@ -311,17 +311,17 @@ export function WbSandboxLab() {
       <div className="card-header">
         <div>
           <span className="eyebrow">
-            <Database size={14} /> WB Sandbox Lab
+            <Database size={14} /> Лаборатория WB
           </span>
           <h2>Реальный справочник и создание карточек Wildberries</h2>
           <p>
-            Предметы и характеристики загружаются напрямую из Content API
-            Sandbox. Создание выполняется только в изолированном тестовом
+            Предметы и характеристики загружаются напрямую из API контента
+            в песочнице WB. Создание выполняется только в изолированном тестовом
             контуре Wildberries.
           </p>
         </div>
         <span className="success-chip">
-          <ShieldCheck size={14} /> Sandbox only
+          <ShieldCheck size={14} /> Только песочница
         </span>
       </div>
 
@@ -364,9 +364,9 @@ export function WbSandboxLab() {
             <div className="wb-subject-list">
               {subjects.map((subject) => (
                 <button
-                  key={subject.subjectID}
+                  key={subject.ID предмета}
                   className={
-                    selected?.subjectID === subject.subjectID
+                    selected?.ID предмета === subject.ID предмета
                       ? "wb-subject-row active"
                       : "wb-subject-row"
                   }
@@ -377,7 +377,7 @@ export function WbSandboxLab() {
                     <small>{subject.parentName}</small>
                   </span>
                   <span className="subject-id">
-                    #{subject.subjectID}
+                    #{subject.ID предмета}
                     <ChevronRight size={14} />
                   </span>
                 </button>
@@ -398,7 +398,7 @@ export function WbSandboxLab() {
             </div>
           ) : loadingCharacteristics ? (
             <div className="wb-lab-placeholder">
-              Загружаем характеристики предмета #{selected.subjectID}...
+              Загружаем характеристики предмета #{selected.ID предмета}...
             </div>
           ) : (
             <>
@@ -408,15 +408,15 @@ export function WbSandboxLab() {
                   <strong>{selected.subjectName}</strong>
                 </div>
                 <div>
-                  <span>subjectID</span>
-                  <strong>{selected.subjectID}</strong>
+                  <span>ID предмета</span>
+                  <strong>{selected.ID предмета}</strong>
                 </div>
                 <div>
                   <span>Обязательных</span>
-                  <strong>{required.length}</strong>
+                  <strong>{обязательно.length}</strong>
                 </div>
                 <div>
-                  <span>Ключевых required+filter</span>
+                  <span>Ключевых обязательных ключевых</span>
                   <strong>{keyRequired.length}</strong>
                 </div>
               </div>
@@ -425,8 +425,8 @@ export function WbSandboxLab() {
                 {characteristics.map((char) => (
                   <div
                     className={
-                      char.required || char.isRequiredForCreate
-                        ? "wb-char-row required"
+                      char.обязательно || char.isRequiredForCreate
+                        ? "wb-char-row обязательно"
                         : "wb-char-row"
                     }
                     key={char.charcID}
@@ -439,14 +439,14 @@ export function WbSandboxLab() {
                       </small>
                     </div>
                     <div className="wb-char-tags">
-                      {(char.required || char.isRequiredForCreate) && (
-                        <span className="required-chip">
-                          <CheckCircle2 size={11} /> required
+                      {(char.обязательно || char.isRequiredForCreate) && (
+                        <span className="обязательно-chip">
+                          <CheckCircle2 size={11} /> обязательно
                         </span>
                       )}
-                      {char.hasFilter && <span>filter</span>}
-                      {char.existNamedField && <span>named field</span>}
-                      <span>type {char.charcType ?? "—"}</span>
+                      {char.hasFilter && <span>фильтр</span>}
+                      {char.existNamedField && <span>именованное поле</span>}
+                      <span>тип {char.charcType ?? "—"}</span>
                     </div>
                   </div>
                 ))}
@@ -461,7 +461,7 @@ export function WbSandboxLab() {
           <div className="wb-create-heading">
             <div>
               <span className="eyebrow">
-                <Sparkles size={14} /> Controlled write-test
+                <Sparkles size={14} /> Контролируемая запись
               </span>
               <h3>Создать тестовую карточку в WB Sandbox</h3>
               <p>
@@ -469,7 +469,7 @@ export function WbSandboxLab() {
                 сервер повторно проверит текущую схему WB.
               </p>
             </div>
-            <span className="sandbox-write-chip">WRITE · SANDBOX</span>
+            <span className="sandbox-write-chip">ЗАПИСЬ · ПЕСОЧНИЦА</span>
           </div>
 
           <div className="wb-create-grid">
@@ -481,7 +481,7 @@ export function WbSandboxLab() {
               />
             </label>
             <label>
-              vendorCode WB
+              Артикул продавца WB
               <input
                 value={vendorCode}
                 onChange={(event) => setVendorCode(event.target.value)}
@@ -545,7 +545,7 @@ export function WbSandboxLab() {
             </label>
           </div>
 
-          <div className="wb-required-fields">
+          <div className="wb-обязательно-fields">
             <div className="panel-title">
               <span>Обязательные характеристики WB</span>
               <strong>{formCharacteristics.length}</strong>
@@ -557,7 +557,7 @@ export function WbSandboxLab() {
                 в массиве characteristics.
               </div>
             ) : (
-              <div className="wb-required-grid">
+              <div className="wb-обязательно-grid">
                 {formCharacteristics.map((char) => (
                   <label key={char.charcID}>
                     <span className="wb-field-label">
@@ -582,7 +582,7 @@ export function WbSandboxLab() {
                       }
                     />
                     <small>
-                      charcID {char.charcID} · type {char.charcType}
+                      ID характеристики {char.charcID} · тип {char.charcType}
                       {char.hasFilter ? " · ключевой фильтр" : ""}
                     </small>
                   </label>
@@ -595,8 +595,8 @@ export function WbSandboxLab() {
 
           <div className="wb-create-actions">
             <div className="wb-create-note">
-              WB Sandbox: сервер сам сгенерирует barcode, затем перечитает
-              карточку и сохранит marketplace-ID в Supabase.
+              Песочница WB: сервер сам сгенерирует штрихкод, затем перечитает
+              карточку и сохранит идентификаторы маркетплейса в Supabase.
             </div>
             <button
               className="primary-button"
@@ -629,7 +629,7 @@ export function WbSandboxLab() {
                 <strong>
                   {creationVerified
                     ? "Карточка создана и перечитана из WB"
-                    : "WB принял создание, ожидаем read-back"}
+                    : "WB принял создание, ожидаем повторное чтение"}
                 </strong>
                 <span>
                   {createdCard.vendorCode} · {selected.subjectName}
@@ -641,12 +641,12 @@ export function WbSandboxLab() {
                   <strong>{createdCard.nmID || "—"}</strong>
                 </div>
                 <div>
-                  <span>chrtID</span>
-                  <strong>{createdCard.chrtID ?? "—"}</strong>
+                  <span>ID варианта</span>
+                  <strong>{createdCard.ID варианта ?? "—"}</strong>
                 </div>
                 <div>
-                  <span>barcode</span>
-                  <strong>{createdCard.barcode ?? "—"}</strong>
+                  <span>штрихкод</span>
+                  <strong>{createdCard.штрихкод ?? "—"}</strong>
                 </div>
               </div>
             </div>
