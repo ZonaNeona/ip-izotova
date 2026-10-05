@@ -32,10 +32,9 @@ type Characteristic = {
 
 type ApiPayload<T> = {
   data?: T;
-  error?: boolean;
+  error?: boolean | string;
   errorText?: string;
   additionalErrors?: unknown;
-  error?: string;
 };
 
 export function WbSandboxLab() {
