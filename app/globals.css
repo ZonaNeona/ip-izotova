@@ -5534,3 +5534,162 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Catalog functional pass */
+.catalog-table-wrap {
+  max-height: none;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.catalog-pagination {
+  min-height: 66px;
+  padding: 13px 20px;
+  border-top: 1px solid #ebe7ed;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fcfbfc;
+}
+
+.catalog-page-size,
+.catalog-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #776f7b;
+  font-size: 12px;
+}
+
+.catalog-page-size select {
+  height: 36px;
+  min-width: 66px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #e3dde6;
+  border-radius: 10px;
+  background: #fff;
+  color: #4f4753;
+  font-size: 12px;
+}
+
+.catalog-page-controls button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid #e2dce5;
+  border-radius: 10px;
+  background: #fff;
+  color: #5e5562;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.catalog-page-controls button:hover:not(:disabled) {
+  color: #86218f;
+  border-color: #d7c9db;
+  transform: translateY(-1px);
+}
+
+.catalog-page-controls button:disabled {
+  opacity: .42;
+}
+
+.catalog-page-controls > span {
+  min-width: 54px;
+  text-align: center;
+  font-weight: 750;
+  color: #504853;
+}
+
+/* Product 360 interactive recommendation */
+.p360-recommendation-detail,
+.p360-evidence-panel {
+  margin-top: 11px;
+  padding: 13px;
+  border: 1px solid #e9deec;
+  border-radius: 12px;
+  background: rgba(255,255,255,.76);
+}
+
+.p360-recommendation-detail > div:first-child > span {
+  color: #95519a;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.p360-recommendation-detail p {
+  margin: 7px 0 0;
+  color: #5f5663;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.p360-recommendation-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.p360-recommendation-actions .primary-button,
+.p360-recommendation-actions .secondary-button {
+  flex: 1;
+}
+
+.p360-evidence-panel {
+  display: grid;
+  gap: 0;
+}
+
+.p360-evidence-row {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid #eee8f0;
+}
+
+.p360-evidence-row:first-child {
+  border-top: 0;
+}
+
+.p360-evidence-row span {
+  color: #776e7a;
+  font-size: 11px;
+}
+
+.p360-evidence-row strong {
+  color: #312a35;
+  text-align: right;
+  font-size: 12px;
+}
+
+.p360-decision-message {
+  margin-top: 11px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: #eff9f4;
+  color: #197253;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .catalog-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .catalog-page-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .p360-recommendation-actions {
+    flex-direction: column;
+  }
+}
