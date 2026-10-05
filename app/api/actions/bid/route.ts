@@ -19,6 +19,7 @@ export async function POST(request: Request) {
 
   const updated = await supabasePatch("campaigns", { id: body.campaignId }, {
     current_bid: body.to,
+    recommendation_status: "applied",
     updated_at: new Date().toISOString(),
   });
 
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   await supabaseInsert("audit_log", {
     actor: "Оператор",
     action: `Подтверждено изменение ставки ${body.sku ?? ""}`.trim(),
-    result: `${body.from ?? "—"} ₽ → ${body.to} ₽ · Supabase Demo API`,
+    result: `${body.from ?? "—"} ₽ → ${body.to} ₽ · ставка применена`,
     tone: "success",
     entity_type: "campaign",
     entity_id: body.campaignId,
