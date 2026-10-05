@@ -392,7 +392,11 @@ export function Product360({
 
       <header className="p360-header">
         <div className="p360-product-avatar">
-          <ShoppingBag size={26} />
+          {data.product.thumbnailUrl ? (
+            <img src={data.product.thumbnailUrl} alt={data.product.name} />
+          ) : (
+            <ShoppingBag size={26} />
+          )}
         </div>
         <div className="p360-title">
           <div className="p360-kicker">
