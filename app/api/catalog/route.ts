@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseSelect } from "@/lib/supabase-rest";
+import { mediaProxyUrl } from "@/lib/media-url";
 
 type CatalogRow = {
   id: string;
@@ -110,7 +111,7 @@ export async function GET() {
       ozonSeverity: row.ozon_severity,
       ozonIncidentTitle: row.ozon_incident_title,
       thumbnailUrl: row.thumbnail_path
-        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(row.thumbnail_path)}`
+        ? mediaProxyUrl("product-thumbnails", row.thumbnail_path)
         : null,
     })),
   });

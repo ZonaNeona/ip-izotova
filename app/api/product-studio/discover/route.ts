@@ -5,6 +5,7 @@ import {
   supabasePatch,
 } from "@/lib/supabase-rest";
 import { uploadBytesToPublicBucket } from "@/lib/supabase-storage";
+import { clientMediaUrl } from "@/lib/media-url";
 
 const WB_BASE = "https://content-api-sandbox.wildberries.ru";
 
@@ -697,7 +698,7 @@ export async function POST(request: Request) {
         subject?.subjectName ||
         identity.data.category ||
         "Товар",
-      sourceImageUrl,
+      sourceImageUrl: clientMediaUrl(sourceImageUrl),
     },
     wb: {
       subjectId: subject?.subjectID ?? null,
@@ -719,7 +720,7 @@ export async function POST(request: Request) {
         : identity.data.sources,
     confidence: identity.data.confidence,
     image: {
-      publicUrl: sourceImageUrl,
+      publicUrl: clientMediaUrl(sourceImageUrl),
       originalUrl:
         storedImage?.originalUrl ||
         identity.data.primaryImageUrl ||

@@ -5,6 +5,11 @@ import {
   dataUriToBytes,
   uploadBytesToPublicBucket,
 } from "@/lib/supabase-storage";
+import {
+  clientMediaUrl,
+  storagePublicUrl,
+  storageUrlFromMediaProxy,
+} from "@/lib/media-url";
 
 type Attribute = {
   name: string;
@@ -241,7 +246,9 @@ async function persistSourceImage(
   sourceImage?: string | null,
 ) {
   if (!sourceImage) return null;
-  if (!sourceImage.startsWith("data:")) return sourceImage;
+  if (!sourceImage.startsWith("data:")) {
+    return storageUrlFromMediaProxy(sourceImage);
+  }
 
   const parsed = dataUriToBytes(sourceImage);
   if (!parsed) return null;
@@ -321,7 +328,7 @@ export async function POST(request: Request) {
     product.id,
     body.sourceImage ||
       (product.thumbnail_path
-        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(product.thumbnail_path)}`
+        ? storagePublicUrl("product-thumbnails", product.thumbnail_path)
         : null),
   );
 
@@ -380,7 +387,7 @@ export async function POST(request: Request) {
       specs: product.specs ?? {},
       wbSubjectId: product.wb_subject_id,
       wbSubjectName: product.wb_subject_name,
-      sourceImageUrl,
+      sourceImageUrl: clientMediaUrl(sourceImageUrl),
     },
     content: finalContent,
   });
