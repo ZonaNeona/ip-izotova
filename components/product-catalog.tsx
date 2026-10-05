@@ -162,8 +162,20 @@ export function ProductCatalog() {
 
     const getter = (item: CatalogItem) => {
       if (sort === "growth") return item.growth;
-      if (sort === "margin") return margin;
-      if (sort === "drr") return drr;
+      if (sort === "margin") {
+        return channel === "wb"
+          ? item.wbMargin30d
+          : channel === "ozon"
+            ? item.ozonMargin30d
+            : item.margin30d;
+      }
+      if (sort === "drr") {
+        return channel === "wb"
+          ? item.wbDrr30d
+          : channel === "ozon"
+            ? item.ozonDrr30d
+            : item.drr30d;
+      }
       if (sort === "stock") return getStock(item);
       return getRevenue(item);
     };
@@ -413,13 +425,13 @@ export function ProductCatalog() {
                   ? item.wbMargin30d
                   : channel === "ozon"
                     ? item.ozonMargin30d
-                    : margin;
+                    : item.margin30d;
               const drr =
                 channel === "wb"
                   ? item.wbDrr30d
                   : channel === "ozon"
                     ? item.ozonDrr30d
-                    : drr;
+                    : item.drr30d;
 
               return (
                 <div
