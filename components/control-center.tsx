@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductCardStudio } from "@/components/product-card-studio";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { ProductCatalog } from "@/components/product-catalog";
+import { MarketplaceLinks } from "@/components/marketplace-links";
 import {
   Activity,
   AlertTriangle,
@@ -93,15 +94,15 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
   },
   reviews: {
     title: "Отзывы и вопросы",
-    subtitle: "AI готовит ответы, правила определяют уровень автономности",
+    subtitle: "ИИ готовит ответы, правила определяют уровень автономности",
   },
   cards: {
     title: "Карточки товаров",
-    subtitle: "AI-контент и изображения с обязательной проверкой перед публикацией",
+    subtitle: "ИИ-контент и изображения с обязательной проверкой перед публикацией",
   },
   inventory: {
     title: "Остатки и поставки",
-    subtitle: "Прогноз stockout и расчёт рекомендуемого пополнения",
+    subtitle: "Прогноз дефицита и расчёт рекомендуемого пополнения",
   },
   economics: {
     title: "Юнит-экономика",
@@ -259,7 +260,7 @@ export function ControlCenter() {
 
     setSentReviews((current) => [...current, reviewId]);
     pushAudit({
-      actor: "AI Reviews + Оператор",
+      actor: "ИИ отзывов + оператор",
       action: `Ответ на отзыв по ${product}`,
       result: `Подтверждён и отправлен через ${dataMode === "live" ? "Supabase" : "Demo API"}`,
       tone: "success",
@@ -286,7 +287,7 @@ export function ControlCenter() {
 
     setCreatedSupplies((current) => [...current, id]);
     pushAudit({
-      actor: "Supply Engine",
+      actor: "Расчёт поставок",
       action: `Создана заявка на поставку ${sku}`,
       result: `${qty} шт. · ожидает подтверждения склада`,
       tone: "info",
@@ -302,14 +303,14 @@ export function ControlCenter() {
         <div className="brand">
           <div className="brand-mark">W</div>
           <div>
-            <div className="brand-title">Marketplace AI</div>
-            <div className="brand-subtitle">Control Center</div>
+            <div className="brand-title">Маркетплейс ИИ</div>
+            <div className="brand-subtitle">Центр управления</div>
           </div>
         </div>
 
         <div className="mode-pill">
           <span className="live-dot" />
-          {dataMode === "live" ? "SUPABASE LIVE" : "DEMO MODE"}
+          {dataMode === "live" ? "SUPABASE · ПОДКЛЮЧЕНО" : "ДЕМО-РЕЖИМ"}
         </div>
 
         <nav className="nav">
@@ -351,7 +352,7 @@ export function ControlCenter() {
 
       <main className="main">
         <header className="topbar">
-          <div className="mobile-brand">Marketplace AI</div>
+          <div className="mobile-brand">Маркетплейс ИИ</div>
           <div className="search-box">
             <Search size={17} />
             <input
@@ -383,7 +384,7 @@ export function ControlCenter() {
             </div>
             <div className="sync-state">
               <span className="sync-dot" />
-              {dataMode === "live" ? "Supabase · live data" : "Demo data · fallback"}
+              {dataMode === "live" ? "Supabase · данные в реальном времени" : "Демо-данные · резервный режим"}
             </div>
           </div>
 
@@ -409,7 +410,7 @@ export function ControlCenter() {
               onGenerate={() => {
                 setCardGenerated(true);
                 pushAudit({
-                  actor: "AI Content",
+                  actor: "ИИ-контент",
                   action: "Создан черновик карточки HeatPro X500",
                   result: "Текст и медиа готовы к проверке перед публикацией",
                   tone: "info",
@@ -525,11 +526,11 @@ function Overview({
           <div className="card-header">
             <div>
               <span className="eyebrow">
-                <Sparkles size={14} /> AI-сводка
+                <Sparkles size={14} /> ИИ-сводка
               </span>
               <h2>Что изменилось</h2>
             </div>
-            <span className="ai-chip">OpenRouter ready</span>
+            <span className="ai-chip">OpenRouter подключён</span>
           </div>
 
           <p>
@@ -593,7 +594,7 @@ function Overview({
         <article className="card">
           <div className="card-header">
             <div>
-              <span className="eyebrow">Audit trail</span>
+              <span className="eyebrow">Журнал контроля</span>
               <h2>Последние действия</h2>
             </div>
             <button className="text-button" onClick={() => onOpen("audit")}>
@@ -630,7 +631,7 @@ function Advertising({
     <article className="card data-card">
       <div className="card-header table-title">
         <div>
-          <span className="eyebrow">Demo API</span>
+          <span className="eyebrow">Демо API</span>
           <h2>Активные рекламные кампании</h2>
         </div>
         <div className="legend">
@@ -658,6 +659,7 @@ function Advertising({
               <span className="product-cell">
                 <strong>{item.product}</strong>
                 <small>{item.sku}</small>
+                <MarketplaceLinks sku={item.sku} compact />
               </span>
               <span>{rub(item.currentBid)}</span>
               <span>{rub(item.spend)}</span>
@@ -699,7 +701,7 @@ function Advertising({
           <strong>Почему HeatPro X500 предлагается снизить?</strong>
           <span>
             Расход вырос, а число заказов не компенсирует рост стоимости
-            привлечения. Рекомендация рассчитана правилами, AI используется
+            привлечения. Рекомендация рассчитана правилами, ИИ используется
             только для объяснения решения человеку.
           </span>
         </div>
@@ -780,6 +782,7 @@ function Reviews({
                 </div>
                 <strong>{review.product}</strong>
                 <small>{review.author}</small>
+                <MarketplaceLinks sku={review.product} compact />
               </div>
               <span className={review.rating <= 3 ? "risk-chip medium" : "risk-chip low"}>
                 {answer.risk} риск
@@ -797,7 +800,7 @@ function Reviews({
               <div className="draft-head">
                 <span>
                   <WandSparkles size={15} />
-                  AI-черновик · {answer.mode === "live" ? "LIVE" : "DEMO"}
+                  ИИ-черновик · {answer.mode === "live" ? "LIVE" : "DEMO"}
                 </span>
                 <button
                   className="text-button"
@@ -805,7 +808,7 @@ function Reviews({
                   onClick={() => refreshAnswer(review)}
                 >
                   <RefreshCw size={13} />
-                  {loadingId === review.id ? "Генерация..." : "Обновить AI"}
+                  {loadingId === review.id ? "Генерация..." : "Обновить ИИ"}
                 </button>
               </div>
               <p>{answer.draft}</p>
@@ -880,7 +883,7 @@ function Cards({
             <span className="eyebrow">Новая карточка</span>
             <h2>Исходные данные товара</h2>
           </div>
-          <span className="demo-chip">AI fallback</span>
+          <span className="demo-chip">Резервный режим ИИ</span>
         </div>
 
         <div className="form-grid">
@@ -929,7 +932,7 @@ function Cards({
         {!generated ? (
           <div className="empty-preview">
             <WandSparkles size={34} />
-            <strong>Здесь появится AI-черновик</strong>
+            <strong>Здесь появится ИИ-черновик</strong>
             <span>
               Текст, характеристики и медиа проходят проверку перед отправкой в
               маркетплейс.
@@ -940,16 +943,17 @@ function Cards({
             <div className="card-header">
               <div>
                 <span className="eyebrow">
-                  Черновик готов · {preview?.mode === "live" ? "LIVE AI" : "DEMO AI"}
+                  Черновик готов · {preview?.mode === "live" ? "ИИ подключён" : "Демо ИИ"}
                 </span>
                 <h2>HeatPro X500</h2>
+                <MarketplaceLinks sku="HP-X500-BLK" compact />
               </div>
               <span className="success-chip"><CheckCircle2 size={14} /> Проверено</span>
             </div>
             <div className="product-preview">
               <div className="fake-product-image">
                 <PackageCheck size={54} />
-                <span>IMAGE PREVIEW</span>
+                <span>ПРЕДПРОСМОТР</span>
               </div>
               <div>
                 <span className="category-line">
@@ -1003,7 +1007,7 @@ function Inventory({
     <article className="card data-card">
       <div className="card-header table-title">
         <div>
-          <span className="eyebrow">Supply engine</span>
+          <span className="eyebrow">Расчёт поставок</span>
           <h2>Остатки и прогноз</h2>
         </div>
         <span className="formula-note">расчёт без LLM</span>
@@ -1070,7 +1074,7 @@ function Inventory({
       <div className="formula-strip">
         <BarChart3 size={18} />
         <span>
-          Пример логики: средние продажи × целевые дни покрытия + safety stock −
+          Пример логики: средние продажи × целевые дни покрытия + страховой запас −
           текущий доступный остаток.
         </span>
       </div>
@@ -1104,10 +1108,10 @@ function Economics({ rows }: { rows: typeof economicsRows }) {
       <article className="card data-card">
         <div className="card-header table-title">
           <div>
-            <span className="eyebrow">Calculation engine</span>
+            <span className="eyebrow">Расчётная модель</span>
             <h2>Разложение маржи</h2>
           </div>
-          <span className="formula-note">100% deterministic</span>
+          <span className="formula-note">100% детерминированный расчёт</span>
         </div>
 
         <div className="data-table economics-table">
@@ -1127,6 +1131,7 @@ function Economics({ rows }: { rows: typeof economicsRows }) {
               <span className="product-cell">
                 <strong>{row.product}</strong>
                 <small>{row.sku}</small>
+                <MarketplaceLinks sku={row.sku} compact />
               </span>
               <span>{rub(row.price)}</span>
               <span>−{rub(row.discount)}</span>
@@ -1153,7 +1158,7 @@ function Reconciliation({ rows }: { rows: typeof reconciliationRows }) {
     <article className="card data-card">
       <div className="card-header table-title">
         <div>
-          <span className="eyebrow">Source of truth</span>
+          <span className="eyebrow">Контрольный источник</span>
           <h2>WB ↔ учётная система</h2>
         </div>
         <button className="secondary-button">
@@ -1173,7 +1178,10 @@ function Reconciliation({ rows }: { rows: typeof reconciliationRows }) {
         </div>
         {rows.map((row) => (
           <div className="table-row" key={row.sku}>
-            <span><strong>{row.sku}</strong></span>
+            <span className="product-cell">
+              <strong>{row.sku}</strong>
+              <MarketplaceLinks sku={row.sku} compact />
+            </span>
             <span>{row.wb}</span>
             <span>{row.erp}</span>
             <span className={row.diff !== 0 ? "bad-metric" : "ok-text"}>
@@ -1215,7 +1223,7 @@ function Audit({ events }: { events: AuditEvent[] }) {
     <article className="card audit-card">
       <div className="card-header">
         <div>
-          <span className="eyebrow">Audit trail</span>
+          <span className="eyebrow">Журнал контроля</span>
           <h2>История решений и действий</h2>
         </div>
       </div>
