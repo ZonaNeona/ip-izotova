@@ -185,10 +185,31 @@ export function ProductCatalog() {
 
   if (loading) {
     return (
-      <div className="catalog-loading card">
-        <RefreshCw size={24} />
-        <strong>Загружаем каталог…</strong>
-        <span>100 SKU · WB + Ozon · 30-дневная сводка</span>
+      <div className="catalog-skeleton card">
+        <div className="catalog-skeleton-top">
+          <div className="premium-skeleton catalog-skeleton-search" />
+          <div className="premium-skeleton catalog-skeleton-filter" />
+          <div className="premium-skeleton catalog-skeleton-filter" />
+        </div>
+        <div className="catalog-skeleton-head">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div className="premium-skeleton" key={index} />
+          ))}
+        </div>
+        <div className="catalog-skeleton-rows">
+          {Array.from({ length: 7 }).map((_, row) => (
+            <div className="catalog-skeleton-row" key={row}>
+              <div className="premium-skeleton catalog-skeleton-thumb" />
+              <div className="catalog-skeleton-product-copy">
+                <div className="premium-skeleton" />
+                <div className="premium-skeleton short" />
+              </div>
+              {Array.from({ length: 6 }).map((__, col) => (
+                <div className="premium-skeleton catalog-skeleton-cell" key={col} />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
