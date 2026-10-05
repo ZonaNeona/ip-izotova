@@ -8,6 +8,7 @@ import { MarketplaceLinks } from "@/components/marketplace-links";
 import { AdvertisingCenter } from "@/components/advertising-center";
 import { FeedbackCenter } from "@/components/feedback-center";
 import { InventoryCenter } from "@/components/inventory-center";
+import { UnitEconomicsCenter } from "@/components/unit-economics-center";
 import {
   Activity,
   AlertTriangle,
@@ -108,7 +109,7 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
   },
   economics: {
     title: "Юнит-экономика",
-    subtitle: "Формулы считаются кодом, а не языковой моделью",
+    subtitle: "Прибыльность SKU · расходы по каналам · точка безубыточности · сценарный анализ",
   },
   reconciliation: {
     title: "Склады, остатки и поставки",
@@ -422,7 +423,7 @@ export function ControlCenter() {
             />
           )}
           {section === "inventory" && <InventoryCenter initialTab="stock" />}
-          {section === "economics" && <Economics rows={economics} />}
+          {section === "economics" && <UnitEconomicsCenter />}
           {section === "reconciliation" && (
             <InventoryCenter initialTab="reconciliation" />
           )}
