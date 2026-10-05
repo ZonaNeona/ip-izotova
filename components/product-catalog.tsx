@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { Product360 } from "@/components/product-360";
+import { MarketplaceLinks } from "@/components/marketplace-links";
 
 type CatalogItem = {
   id: string;
@@ -501,6 +502,7 @@ export function ProductCatalog() {
                     <div className="catalog-product-copy">
                       <strong>{item.name}</strong>
                       <small>{item.sku} · {item.category}</small>
+                      <MarketplaceLinks sku={item.sku} compact />
                     </div>
                   </div>
 
