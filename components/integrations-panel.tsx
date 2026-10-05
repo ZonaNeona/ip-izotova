@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WbSandboxLab } from "@/components/wb-sandbox-lab";
 import {
   CheckCircle2,
   CircleAlert,
@@ -218,6 +219,8 @@ export function IntegrationsPanel() {
           </>
         )}
       </article>
+
+      <WbSandboxLab />
     </div>
   );
 }
