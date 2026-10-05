@@ -151,6 +151,7 @@ export function ControlCenter() {
   const [createdSupplies, setCreatedSupplies] = useState<string[]>([]);
   const [cardGenerated, setCardGenerated] = useState(false);
   const [search, setSearch] = useState("");
+  const [reviewQueueCount, setReviewQueueCount] = useState(141);
 
   const attentionCount = attentionItems.length;
 
@@ -329,7 +330,11 @@ export function ControlCenter() {
                   <Icon size={18} strokeWidth={1.9} />
                   {item.label}
                 </span>
-                {item.badge && <span className="nav-badge">{item.badge}</span>}
+                {(item.id === "reviews" ? reviewQueueCount > 0 : Boolean(item.badge)) && (
+                  <span className="nav-badge">
+                    {item.id === "reviews" ? reviewQueueCount : item.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -399,7 +404,9 @@ export function ControlCenter() {
           )}
           {section === "products" && <ProductCatalog />}
           {section === "advertising" && <AdvertisingCenter />}
-          {section === "reviews" && <ReviewsCenter />}
+          {section === "reviews" && (
+            <ReviewsCenter onQueueChange={setReviewQueueCount} />
+          )}
           {section === "cards" && (
             <ProductCardStudio
               onGenerate={() => {
