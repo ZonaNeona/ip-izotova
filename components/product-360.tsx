@@ -367,7 +367,7 @@ export function Product360({
     if (!data) return undefined;
     const open = data.incidents.filter((item) => item.status === "open");
     if (channel === "all") return open[0];
-    return open.find((item) => item.channelCode === channel) ?? open[0];
+    return open.find((item) => item.channelCode === channel);
   }, [data, channel]);
 
   const selectedRecommendation = useMemo(() => {
@@ -376,10 +376,7 @@ export function Product360({
       (item) => item.status === "suggested",
     );
     if (channel === "all") return suggested[0];
-    return (
-      suggested.find((item) => item.channelCode === channel) ??
-      suggested[0]
-    );
+    return suggested.find((item) => item.channelCode === channel);
   }, [data, channel]);
 
   const visibleReviews = useMemo(() => {
@@ -774,15 +771,21 @@ export function Product360({
                 </div>
               )}
 
-              {decisionMessage && (
-                <div className="p360-decision-message">{decisionMessage}</div>
-              )}
+
             </>
           ) : (
             <div className="p360-empty">
               <CheckCircle2 size={24} />
-              <span>Критичных действий сейчас нет.</span>
+              <span>
+                {channel === "all"
+                  ? "Активных рекомендаций сейчас нет."
+                  : `Для канала ${channel === "wb" ? "Wildberries" : "Ozon"} активных рекомендаций нет.`}
+              </span>
             </div>
+          )}
+
+          {decisionMessage && (
+            <div className="p360-decision-message">{decisionMessage}</div>
           )}
         </article>
       </section>
