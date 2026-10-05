@@ -5693,3 +5693,23 @@ select:focus-visible {
     flex-direction: column;
   }
 }
+
+
+.p360-source-chip {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #f3eef5;
+  color: #7d7182;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .025em;
+}
+
+.p360-empty-compact {
+  min-height: 120px;
+  margin-top: 12px;
+  border: 1px dashed #e6dfe8;
+  border-radius: 13px;
+  background: #fbf9fc;
+}
