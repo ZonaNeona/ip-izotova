@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -126,7 +126,14 @@ function nowTime() {
 export function ControlCenter() {
   const [section, setSection] = useState<Section>("overview");
   const [campaigns, setCampaigns] = useState(campaignsSeed);
+  const [inventory, setInventory] = useState<
+    Array<(typeof inventorySeed)[number] & { productId?: string }>
+  >(inventorySeed);
+  const [economics, setEconomics] = useState(economicsRows);
+  const [reviews, setReviews] = useState(reviewsSeed);
+  const [reconciliations, setReconciliations] = useState(reconciliationRows);
   const [audit, setAudit] = useState<AuditEvent[]>(auditSeed);
+  const [dataMode, setDataMode] = useState<"demo" | "live">("demo");
   const [toast, setToast] = useState<string | null>(null);
   const [sentReviews, setSentReviews] = useState<string[]>([]);
   const [createdSupplies, setCreatedSupplies] = useState<string[]>([]);
@@ -134,6 +141,41 @@ export function ControlCenter() {
   const [search, setSearch] = useState("");
 
   const attentionCount = attentionItems.length;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      try {
+        const response = await fetch("/api/dashboard", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok || cancelled) return;
+
+        if (payload.campaigns) setCampaigns(payload.campaigns);
+        if (payload.inventory) setInventory(payload.inventory);
+        if (payload.economics) setEconomics(payload.economics);
+        if (payload.reviews) {
+          setReviews(payload.reviews);
+          setSentReviews(
+            payload.reviews
+              .filter((item: { status?: string }) => item.status === "answered")
+              .map((item: { id: string }) => item.id),
+          );
+        }
+        if (payload.reconciliations) setReconciliations(payload.reconciliations);
+        if (payload.audit) setAudit(payload.audit);
+        setDataMode(payload.mode === "live" ? "live" : "demo");
+      } catch {
+        setDataMode("demo");
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredCampaigns = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -161,7 +203,23 @@ export function ControlCenter() {
     window.setTimeout(() => setToast(null), 2600);
   }
 
-  function applyBid(campaign: Campaign) {
+  async function applyBid(campaign: Campaign) {
+    const response = await fetch("/api/actions/bid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        campaignId: campaign.id,
+        sku: campaign.sku,
+        from: campaign.currentBid,
+        to: campaign.recommendedBid,
+      }),
+    });
+
+    if (!response.ok) {
+      notify("Не удалось применить ставку.");
+      return;
+    }
+
     setCampaigns((current) =>
       current.map((item) =>
         item.id === campaign.id
@@ -172,24 +230,51 @@ export function ControlCenter() {
     pushAudit({
       actor: "Оператор",
       action: `Подтверждено изменение ставки ${campaign.sku}`,
-      result: `${rub(campaign.currentBid)} → ${rub(campaign.recommendedBid)} · Demo API`,
+      result: `${rub(campaign.currentBid)} → ${rub(campaign.recommendedBid)} · ${dataMode === "live" ? "Supabase" : "Demo API"}`,
       tone: "success",
     });
-    notify("Ставка применена в Demo Mode и записана в журнал.");
+    notify("Ставка применена и действие записано в журнал.");
   }
 
-  function sendReview(reviewId: string, product: string) {
+  async function sendReview(reviewId: string, product: string) {
+    const response = await fetch("/api/actions/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewId, product }),
+    });
+
+    if (!response.ok) {
+      notify("Не удалось отправить ответ.");
+      return;
+    }
+
     setSentReviews((current) => [...current, reviewId]);
     pushAudit({
       actor: "AI Reviews + Оператор",
       action: `Ответ на отзыв по ${product}`,
-      result: "Подтверждён и отправлен через Demo API",
+      result: `Подтверждён и отправлен через ${dataMode === "live" ? "Supabase" : "Demo API"}`,
       tone: "success",
     });
     notify("Ответ отправлен. Действие зафиксировано.");
   }
 
-  function createSupply(id: string, sku: string, qty: number) {
+  async function createSupply(
+    id: string,
+    productId: string,
+    sku: string,
+    qty: number,
+  ) {
+    const response = await fetch("/api/actions/supply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, sku, quantity: qty }),
+    });
+
+    if (!response.ok) {
+      notify("Не удалось создать заявку.");
+      return;
+    }
+
     setCreatedSupplies((current) => [...current, id]);
     pushAudit({
       actor: "Supply Engine",
@@ -215,7 +300,7 @@ export function ControlCenter() {
 
         <div className="mode-pill">
           <span className="live-dot" />
-          DEMO MODE
+          {dataMode === "live" ? "SUPABASE LIVE" : "DEMO MODE"}
         </div>
 
         <nav className="nav">
@@ -289,7 +374,7 @@ export function ControlCenter() {
             </div>
             <div className="sync-state">
               <span className="sync-dot" />
-              Demo data · обновлено 2 мин. назад
+              {dataMode === "live" ? "Supabase · live data" : "Demo data · fallback"}
             </div>
           </div>
 
@@ -307,7 +392,7 @@ export function ControlCenter() {
             />
           )}
           {section === "reviews" && (
-            <Reviews sent={sentReviews} onSend={sendReview} />
+            <Reviews items={reviews} sent={sentReviews} onSend={sendReview} />
           )}
           {section === "cards" && (
             <Cards
@@ -326,12 +411,15 @@ export function ControlCenter() {
           )}
           {section === "inventory" && (
             <Inventory
+              items={inventory}
               created={createdSupplies}
               onCreate={createSupply}
             />
           )}
-          {section === "economics" && <Economics />}
-          {section === "reconciliation" && <Reconciliation />}
+          {section === "economics" && <Economics rows={economics} />}
+          {section === "reconciliation" && (
+            <Reconciliation rows={reconciliations} />
+          )}
           {section === "audit" && <Audit events={audit} />}
           {section === "integrations" && <Integrations />}
         </div>
@@ -612,9 +700,11 @@ function Advertising({
 }
 
 function Reviews({
+  items,
   sent,
   onSend,
 }: {
+  items: typeof reviewsSeed;
   sent: string[];
   onSend: (id: string, product: string) => void;
 }) {
@@ -659,7 +749,7 @@ function Reviews({
 
   return (
     <div className="review-grid">
-      {reviewsSeed.map((review) => {
+      {items.map((review) => {
         const isSent = sent.includes(review.id);
         const answer = answers[review.id] ?? {
           classification: review.classification,
@@ -892,11 +982,13 @@ function Cards({
 }
 
 function Inventory({
+  items,
   created,
   onCreate,
 }: {
+  items: Array<(typeof inventorySeed)[number] & { productId?: string }>;
   created: string[];
-  onCreate: (id: string, sku: string, qty: number) => void;
+  onCreate: (id: string, productId: string, sku: string, qty: number) => void;
 }) {
   return (
     <article className="card data-card">
@@ -917,7 +1009,7 @@ function Inventory({
           <span>Запас</span>
           <span>Рекомендация</span>
         </div>
-        {inventorySeed.map((item) => {
+        {items.map((item) => {
           const isCreated = created.includes(item.id);
           const critical = item.daysLeft < 7;
           return (
@@ -945,7 +1037,12 @@ function Inventory({
                       className={isCreated ? "action-button done" : "action-button"}
                       disabled={isCreated}
                       onClick={() =>
-                        onCreate(item.id, item.sku, item.recommendedSupply)
+                        onCreate(
+                          item.id,
+                          item.productId ?? item.id,
+                          item.sku,
+                          item.recommendedSupply,
+                        )
                       }
                     >
                       {isCreated ? <CheckCircle2 size={15} /> : <Truck size={15} />}
@@ -972,8 +1069,8 @@ function Inventory({
   );
 }
 
-function Economics() {
-  const totalProfit = economicsRows.reduce((sum, row) => sum + row.profit, 0);
+function Economics({ rows }: { rows: typeof economicsRows }) {
+  const totalProfit = rows.reduce((sum, row) => sum + row.profit, 0);
 
   return (
     <>
@@ -1016,7 +1113,7 @@ function Economics() {
             <span>Прибыль</span>
             <span>Маржа</span>
           </div>
-          {economicsRows.map((row) => (
+          {rows.map((row) => (
             <div className="table-row" key={row.sku}>
               <span className="product-cell">
                 <strong>{row.product}</strong>
@@ -1042,7 +1139,7 @@ function Economics() {
   );
 }
 
-function Reconciliation() {
+function Reconciliation({ rows }: { rows: typeof reconciliationRows }) {
   return (
     <article className="card data-card">
       <div className="card-header table-title">
@@ -1065,7 +1162,7 @@ function Reconciliation() {
           <span>Обновлено</span>
           <span>Статус</span>
         </div>
-        {reconciliationRows.map((row) => (
+        {rows.map((row) => (
           <div className="table-row" key={row.sku}>
             <span><strong>{row.sku}</strong></span>
             <span>{row.wb}</span>
