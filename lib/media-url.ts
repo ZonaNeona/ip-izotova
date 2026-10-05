@@ -58,3 +58,19 @@ export function clientMediaUrl(value: string | null | undefined) {
     return value;
   }
 }
+
+export function storageUrlFromMediaProxy(value: string | null | undefined) {
+  if (!value) return null;
+  if (!value.startsWith("/api/media?")) return value;
+
+  try {
+    const url = new URL(value, "http://internal.local");
+    const bucket = url.searchParams.get("bucket") ?? "";
+    const path = url.searchParams.get("path") ?? "";
+
+    if (!isAllowedMediaBucket(bucket) || !path) return null;
+    return storagePublicUrl(bucket, path);
+  } catch {
+    return null;
+  }
+}
