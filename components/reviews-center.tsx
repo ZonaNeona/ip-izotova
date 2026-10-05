@@ -250,7 +250,11 @@ function ReviewTrendChart({
   );
 }
 
-export function ReviewsCenter() {
+export function ReviewsCenter({
+  onQueueChange,
+}: {
+  onQueueChange?: (count: number) => void;
+}) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -374,6 +378,12 @@ export function ReviewsCenter() {
   );
 
   const selected = reviews.find((review) => review.id === selectedId) ?? null;
+
+  useEffect(() => {
+    onQueueChange?.(
+      reviews.filter((review) => review.status !== "answered").length,
+    );
+  }, [reviews, onQueueChange]);
 
   useEffect(() => {
     if (!selectedId) return;
