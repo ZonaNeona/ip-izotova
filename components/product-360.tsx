@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MarketplaceLinks } from "@/components/marketplace-links";
+import { listingStatusRu, priorityRu, reviewStatusRu, severityRu } from "@/lib/ui-ru";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -114,6 +116,9 @@ type Product360Data = {
     classification: string | null;
     risk: string | null;
     policy: string | null;
+    ai_draft: string | null;
+    answer_text: string | null;
+    answered_at: string | null;
     status: string;
     created_at: string;
   }>;
@@ -390,6 +395,10 @@ export function Product360({
   const [recommendationModal, setRecommendationModal] = useState<"details" | "evidence" | null>(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
+  const [reviewModalId, setReviewModalId] = useState<string | null>(null);
+  const [reviewAnswer, setReviewAnswer] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -453,13 +462,73 @@ export function Product360({
     return data.reviews.filter((item) => item.channelCode === channel);
   }, [data, channel]);
 
+  const selectedReview = useMemo(
+    () => data?.reviews.find((item) => item.id === reviewModalId) ?? null,
+    [data, reviewModalId],
+  );
+
+  function openReview(review: Product360Data["reviews"][number]) {
+    setReviewModalId(review.id);
+    setReviewAnswer(review.answer_text ?? review.ai_draft ?? "");
+    setReviewMessage(null);
+  }
+
+  async function sendReviewAnswer() {
+    if (!selectedReview || reviewBusy || !reviewAnswer.trim()) return;
+
+    setReviewBusy(true);
+    setReviewMessage(null);
+
+    try {
+      const response = await fetch("/api/actions/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewId: selectedReview.id,
+          product: data?.product.name,
+          answerText: reviewAnswer.trim(),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setReviewMessage(payload.error ?? "Не удалось отправить ответ.");
+        return;
+      }
+
+      const answeredAt = new Date().toISOString();
+      setData((currentData) =>
+        currentData
+          ? {
+              ...currentData,
+              reviews: currentData.reviews.map((item) =>
+                item.id === selectedReview.id
+                  ? {
+                      ...item,
+                      status: "answered",
+                      answer_text: reviewAnswer.trim(),
+                      answered_at: answeredAt,
+                    }
+                  : item,
+              ),
+            }
+          : currentData,
+      );
+      setReviewMessage("Ответ отправлен и сохранён.");
+    } catch {
+      setReviewMessage("Не удалось отправить ответ.");
+    } finally {
+      setReviewBusy(false);
+    }
+  }
+
   useEffect(() => {
     setRecommendationModal(null);
     setDecisionMessage(null);
   }, [channel, sku]);
 
   useEffect(() => {
-    if (!recommendationModal) return;
+    if (!recommendationModal && !reviewModalId) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -467,6 +536,7 @@ export function Product360({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setRecommendationModal(null);
+        setReviewModalId(null);
       }
     }
 
@@ -476,7 +546,7 @@ export function Product360({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [recommendationModal]);
+  }, [recommendationModal, reviewModalId]);
 
   async function decideRecommendation(action: "accepted" | "rejected") {
     if (!selectedRecommendation || decisionBusy) return;
@@ -604,13 +674,19 @@ export function Product360({
             <span>Себестоимость {money(data.product.baseCost)}</span>
             <span>Гарантия {data.product.warrantyMonths} мес.</span>
           </div>
+          <MarketplaceLinks
+            sku={data.product.sku}
+            wbId={wb?.listing.externalProductId}
+            ozonId={ozon?.listing.externalProductId}
+            className="p360-marketplace-links"
+          />
         </div>
         <div className="p360-listings">
           {wb && (
             <div className="listing-badge wb">
               <div className="listing-badge-head">
                 <strong>Wildberries</strong>
-                <span>{wb.listing.status}</span>
+                <span>{listingStatusRu(wb.listing.status)}</span>
               </div>
               <div className="listing-badge-stats">
                 <div>
@@ -635,7 +711,7 @@ export function Product360({
             <div className="listing-badge ozon">
               <div className="listing-badge-head">
                 <strong>Ozon</strong>
-                <span>{ozon.listing.status}</span>
+                <span>{listingStatusRu(ozon.listing.status)}</span>
               </div>
               <div className="listing-badge-stats">
                 <div>
@@ -666,7 +742,7 @@ export function Product360({
             <strong>{mainIncident.title}</strong>
             <span>{mainIncident.description}</span>
           </div>
-          <span className="p360-alert-severity">{mainIncident.severity}</span>
+          <span className="p360-alert-severity">{severityRu(mainIncident.severity)}</span>
         </div>
       )}
 
@@ -751,13 +827,13 @@ export function Product360({
           <div className="p360-card-head">
             <div>
               <span className="eyebrow">
-                <Bot size={14} /> AI-рекомендация
+                <Bot size={14} /> ИИ-рекомендация
               </span>
               <h3>{recommendation?.title ?? "Нет активных рекомендаций"}</h3>
             </div>
             {recommendation && (
               <span className={`priority-chip ${recommendation.priority}`}>
-                {recommendation.priority}
+                {priorityRu(recommendation.priority)}
               </span>
             )}
           </div>
@@ -818,7 +894,7 @@ export function Product360({
                 </div>
                 <div>
                   <strong>{item.name}</strong>
-                  <span>{item.listing.status}</span>
+                  <span>{listingStatusRu(item.listing.status)}</span>
                 </div>
                 <div className="channel-rating">
                   <Star size={14} />
@@ -840,7 +916,7 @@ export function Product360({
         <article className="card p360-economics">
           <div className="p360-card-head">
             <div>
-              <span className="eyebrow">Unit economics</span>
+              <span className="eyebrow">Юнит-экономика</span>
               <h3>Разложение прибыли · {period === 365 ? "1 год" : `${period} дней`}</h3>
             </div>
           </div>
@@ -853,7 +929,7 @@ export function Product360({
               <span className="eyebrow">Конкуренты</span>
               <h3>Цены и позиция</h3>
             </div>
-            <span className="p360-source-chip">WB · demo market data</span>
+            <span className="p360-source-chip">WB · демо-данные рынка</span>
           </div>
           <div className="competitor-list">
             {data.competitors.map((competitor) => {
@@ -906,28 +982,174 @@ export function Product360({
           </div>
         ) : (
           <div className="p360-review-grid">
-            {visibleReviews.slice(0, 6).map((review) => (
-              <article key={review.id} className="p360-review">
-                <div className="p360-review-head">
-                  <strong>{review.author ?? "Покупатель"}</strong>
-                  <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
-                </div>
-                <p>{review.body}</p>
-                <div>
-                  <span>
-                    {review.channelCode === "wb"
-                      ? "WB"
-                      : review.channelCode === "ozon"
-                        ? "Ozon"
-                        : "Все"} · {review.classification ?? "Общий отзыв"}
-                  </span>
-                  <small>{new Date(review.created_at).toLocaleDateString("ru-RU")}</small>
-                </div>
-              </article>
-            ))}
+            {visibleReviews.slice(0, 6).map((review) => {
+              const answered = review.status === "answered";
+              return (
+                <article key={review.id} className="p360-review">
+                  <div className="p360-review-head">
+                    <div>
+                      <strong>{review.author ?? "Покупатель"}</strong>
+                      <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                    </div>
+                    <span className={answered ? "review-status answered" : "review-status pending"}>
+                      {reviewStatusRu(review.status)}
+                    </span>
+                  </div>
+
+                  <p>{review.body}</p>
+
+                  <div className="p360-review-meta">
+                    <span>
+                      {review.channelCode === "wb"
+                        ? "WB"
+                        : review.channelCode === "ozon"
+                          ? "Ozon"
+                          : "Все каналы"} · {review.classification ?? "Общий отзыв"}
+                    </span>
+                    <small>{new Date(review.created_at).toLocaleDateString("ru-RU")}</small>
+                  </div>
+
+                  <div className="p360-review-response-state">
+                    {answered ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        <span>
+                          Ответ отправлен
+                          {review.answered_at
+                            ? ` · ${new Date(review.answered_at).toLocaleDateString("ru-RU")}`
+                            : ""}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot size={14} />
+                        <span>{review.ai_draft ? "Черновик ИИ готов" : "Требуется ответ"}</span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="p360-review-actions">
+                    <MarketplaceLinks
+                      sku={data.product.sku}
+                      wbId={wb?.listing.externalProductId}
+                      ozonId={ozon?.listing.externalProductId}
+                      compact
+                    />
+                    <button
+                      className={answered ? "secondary-button" : "primary-button"}
+                      onClick={() => openReview(review)}
+                    >
+                      {answered ? "Посмотреть ответ" : "Ответить"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
+
+      {reviewModalId && selectedReview && (
+        <div
+          className="p360-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setReviewModalId(null);
+            }
+          }}
+        >
+          <section
+            className="p360-modal p360-review-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="p360-review-modal-title"
+          >
+            <div className="p360-modal-header">
+              <div>
+                <span className="eyebrow">
+                  <Bot size={14} /> Работа с отзывом
+                </span>
+                <h3 id="p360-review-modal-title">
+                  Ответ покупателю
+                </h3>
+                <p>
+                  {selectedReview.channelCode === "wb" ? "Wildberries" : selectedReview.channelCode === "ozon" ? "Ozon" : "Все каналы"}
+                  {" · "}
+                  {reviewStatusRu(selectedReview.status)}
+                </p>
+              </div>
+              <button
+                className="p360-modal-close"
+                onClick={() => setReviewModalId(null)}
+                aria-label="Закрыть"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <div className="p360-modal-body">
+              <div className="review-modal-source">
+                <div className="review-modal-source-head">
+                  <strong>{selectedReview.author ?? "Покупатель"}</strong>
+                  <span>{"★".repeat(selectedReview.rating)}{"☆".repeat(5 - selectedReview.rating)}</span>
+                </div>
+                <p>{selectedReview.body}</p>
+              </div>
+
+              <label className="review-answer-editor">
+                <span>{selectedReview.status === "answered" ? "Отправленный ответ" : "Ответ"}</span>
+                <textarea
+                  value={reviewAnswer}
+                  onChange={(event) => setReviewAnswer(event.target.value)}
+                  readOnly={selectedReview.status === "answered"}
+                  placeholder="Напишите ответ покупателю..."
+                />
+              </label>
+
+              {selectedReview.ai_draft && selectedReview.status !== "answered" && (
+                <div className="review-ai-note">
+                  <Bot size={15} />
+                  <span>Поле уже заполнено черновиком ИИ. Его можно отредактировать перед отправкой.</span>
+                </div>
+              )}
+
+              <MarketplaceLinks
+                sku={data.product.sku}
+                wbId={wb?.listing.externalProductId}
+                ozonId={ozon?.listing.externalProductId}
+              />
+
+              {reviewMessage && (
+                <div className="p360-decision-message">{reviewMessage}</div>
+              )}
+            </div>
+
+            <div className="p360-modal-footer">
+              <div className="p360-modal-decision-note">
+                Ответ сохраняется в истории и журнале действий.
+              </div>
+              <div className="p360-modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setReviewModalId(null)}
+                >
+                  Закрыть
+                </button>
+                {selectedReview.status !== "answered" && (
+                  <button
+                    className="primary-button"
+                    onClick={sendReviewAnswer}
+                    disabled={reviewBusy || !reviewAnswer.trim()}
+                  >
+                    {reviewBusy ? "Отправляем..." : "Отправить ответ"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       {recommendationModal && recommendation && (
         <div
@@ -948,7 +1170,7 @@ export function Product360({
             <div className="p360-modal-header">
               <div>
                 <span className="eyebrow">
-                  <Bot size={14} /> AI-рекомендация
+                  <Bot size={14} /> ИИ-рекомендация
                 </span>
                 <h3 id="p360-recommendation-modal-title">
                   {recommendation.title}
