@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { supabasePatch } from "@/lib/supabase-rest";
 
 type PingResult = {
   category: string;
@@ -137,10 +138,37 @@ export async function GET() {
     results.push(await ping(token, item));
   }
 
+  const ok = results.every((item) => item.ok);
+  const checkedAt = new Date().toISOString();
+
+  await supabasePatch(
+    "integration_settings",
+    { provider: "wildberries_sandbox" },
+    {
+      status: ok ? "connected" : "error",
+      last_sync_at: checkedAt,
+      details: {
+        categories: results.map((item) => ({
+          category: item.category,
+          ok: item.ok,
+          status: item.status,
+          wbStatus: item.wbStatus ?? null,
+        })),
+      },
+      last_error: ok
+        ? null
+        : results
+            .filter((item) => !item.ok)
+            .map((item) => `${item.category}: ${item.error ?? item.status}`)
+            .join("; "),
+      updated_at: checkedAt,
+    },
+  );
+
   return NextResponse.json({
-    ok: results.every((item) => item.ok),
+    ok,
     mode,
-    checkedAt: new Date().toISOString(),
+    checkedAt,
     results,
   });
 }
