@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MarketplaceLinks } from "@/components/marketplace-links";
+import { ModalPortal } from "@/components/modal-portal";
 import { listingStatusRu, priorityRu, reviewStatusRu, severityRu } from "@/lib/ui-ru";
 import {
   AlertTriangle,
@@ -1051,6 +1052,7 @@ export function Product360({
       </section>
 
       {reviewModalId && selectedReview && (
+        <ModalPortal>
         <div
           className="p360-modal-backdrop"
           role="presentation"
@@ -1150,9 +1152,11 @@ export function Product360({
             </div>
           </section>
         </div>
+        </ModalPortal>
       )}
 
       {recommendationModal && recommendation && (
+        <ModalPortal>
         <div
           className="p360-modal-backdrop"
           role="presentation"
@@ -1308,6 +1312,7 @@ export function Product360({
             </div>
           </section>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
