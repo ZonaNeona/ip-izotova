@@ -5,6 +5,7 @@ import {
   persistRemoteAsset,
   uploadBytesToPublicBucket,
 } from "@/lib/supabase-storage";
+import { clientMediaUrl } from "@/lib/media-url";
 
 type MediaKind = "main" | "secondary" | "technical";
 
@@ -353,7 +354,7 @@ export async function POST(request: Request) {
       kind: body.kind,
       title: config.title,
       aspectRatio: config.ratio,
-      image: persisted.publicUrl,
+      image: clientMediaUrl(persisted.publicUrl),
       mode: "live",
       model,
       cost: payload.cost ?? null,
