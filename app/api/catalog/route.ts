@@ -41,6 +41,13 @@ type CatalogRow = {
   ozon_margin_30d: number;
   wb_drr_30d: number;
   ozon_drr_30d: number;
+  wb_growth_pct: number;
+  ozon_growth_pct: number;
+  incident_channel: string | null;
+  wb_severity: string | null;
+  wb_incident_title: string | null;
+  ozon_severity: string | null;
+  ozon_incident_title: string | null;
 };
 
 export async function GET() {
@@ -92,9 +99,16 @@ export async function GET() {
       wbReviews: Number(row.wb_reviews),
       ozonReviews: Number(row.ozon_reviews),
       growth: Number(row.revenue_growth_pct),
+      wbGrowth: Number(row.wb_growth_pct),
+      ozonGrowth: Number(row.ozon_growth_pct),
       severity: row.severity,
       incidentType: row.incident_type,
       incidentTitle: row.incident_title,
+      incidentChannel: row.incident_channel,
+      wbSeverity: row.wb_severity,
+      wbIncidentTitle: row.wb_incident_title,
+      ozonSeverity: row.ozon_severity,
+      ozonIncidentTitle: row.ozon_incident_title,
       thumbnailUrl: row.thumbnail_path
         ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(row.thumbnail_path)}`
         : null,
