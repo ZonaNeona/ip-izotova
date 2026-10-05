@@ -258,6 +258,7 @@ function LineChart({
   data: Metric[];
   metric: MetricKey;
 }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const width = 900;
   const height = 250;
   const paddingX = 12;
@@ -268,36 +269,103 @@ function LineChart({
   const min = Math.min(...values, 0);
   const span = Math.max(max - min, 1);
 
-  const points = values
-    .map((value, index) => {
-      const x =
-        paddingX +
-        (index / Math.max(values.length - 1, 1)) * (width - paddingX * 2);
-      const y =
-        paddingY +
-        (1 - (value - min) / span) * (height - paddingY * 2);
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    })
+  const coords = values.map((value, index) => {
+    const x =
+      paddingX +
+      (index / Math.max(values.length - 1, 1)) * (width - paddingX * 2);
+    const y =
+      paddingY +
+      (1 - (value - min) / span) * (height - paddingY * 2);
+    return { x, y, value };
+  });
+
+  const points = coords
+    .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
     .join(" ");
 
   const fillPoints = `${paddingX},${height - paddingY} ${points} ${width - paddingX},${height - paddingY}`;
+  const hovered =
+    hoveredIndex === null ? null : coords[hoveredIndex] ?? null;
+  const hoveredRow =
+    hoveredIndex === null ? null : data[hoveredIndex] ?? null;
+
+  function formatValue(value: number) {
+    if (metric === "revenue" || metric === "profit" || metric === "adSpend" || metric === "price") {
+      return money(value);
+    }
+    if (metric === "drr") return pct(value);
+    return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value);
+  }
 
   return (
     <div className="p360-chart-wrap">
-      <svg viewBox={`0 0 ${width} ${height}`} className="p360-chart" role="img">
-        {[0.25, 0.5, 0.75].map((ratio) => (
-          <line
-            key={ratio}
-            x1="0"
-            x2={width}
-            y1={height * ratio}
-            y2={height * ratio}
-            className="p360-gridline"
-          />
-        ))}
-        <polygon points={fillPoints} className="p360-area" />
-        <polyline points={points} className="p360-line" />
-      </svg>
+      <div className="p360-chart-stage">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="p360-chart"
+          role="img"
+          onMouseLeave={() => setHoveredIndex(null)}
+          onMouseMove={(event) => {
+            if (!data.length) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const localX = event.clientX - rect.left;
+            const ratio = Math.max(0, Math.min(1, localX / Math.max(rect.width, 1)));
+            const index = Math.round(ratio * Math.max(data.length - 1, 0));
+            setHoveredIndex(index);
+          }}
+        >
+          {[0.25, 0.5, 0.75].map((ratio) => (
+            <line
+              key={ratio}
+              x1="0"
+              x2={width}
+              y1={height * ratio}
+              y2={height * ratio}
+              className="p360-gridline"
+            />
+          ))}
+          <polygon points={fillPoints} className="p360-area" />
+          <polyline points={points} className="p360-line" />
+
+          {hovered && (
+            <>
+              <line
+                x1={hovered.x}
+                x2={hovered.x}
+                y1={paddingY}
+                y2={height - paddingY}
+                className="p360-hover-line"
+              />
+              <circle
+                cx={hovered.x}
+                cy={hovered.y}
+                r="5"
+                className="p360-hover-dot"
+              />
+            </>
+          )}
+        </svg>
+
+        {hovered && hoveredRow && (
+          <div
+            className="p360-chart-tooltip"
+            style={{
+              left: `${(hovered.x / width) * 100}%`,
+              top: `${(hovered.y / height) * 100}%`,
+            }}
+          >
+            <span>
+              {new Date(hoveredRow.date).toLocaleDateString("ru-RU", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+            <strong>{formatValue(hovered.value)}</strong>
+          </div>
+        )}
+      </div>
+
       <div className="p360-axis">
         <span>{data[0]?.date ? new Date(data[0].date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "—"}</span>
         <span>{data.at(-1)?.date ? new Date(data.at(-1)!.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "—"}</span>
