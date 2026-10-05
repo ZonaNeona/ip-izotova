@@ -7,6 +7,7 @@ import { ProductCatalog } from "@/components/product-catalog";
 import { MarketplaceLinks } from "@/components/marketplace-links";
 import { AdvertisingCenter } from "@/components/advertising-center";
 import { FeedbackCenter } from "@/components/feedback-center";
+import { InventoryCenter } from "@/components/inventory-center";
 import {
   Activity,
   AlertTriangle,
@@ -74,9 +75,8 @@ const menu: Array<{
   { id: "advertising", label: "Реклама и ставки", icon: Gauge, badge: "3" },
   { id: "reviews", label: "Отзывы и вопросы", icon: MessageSquareText, badge: "153" },
   { id: "cards", label: "Карточки товаров", icon: ImagePlus },
-  { id: "inventory", label: "Остатки и поставки", icon: Boxes, badge: "4" },
+  { id: "inventory", label: "Склады и поставки", icon: Boxes, badge: "6" },
   { id: "economics", label: "Юнит-экономика", icon: CircleDollarSign },
-  { id: "reconciliation", label: "Сверка данных", icon: ShieldCheck, badge: "2" },
   { id: "audit", label: "Журнал действий", icon: FileText },
   { id: "integrations", label: "Интеграции", icon: Link2 },
 ];
@@ -103,16 +103,16 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
     subtitle: "ИИ-контент и изображения с обязательной проверкой перед публикацией",
   },
   inventory: {
-    title: "Остатки и поставки",
-    subtitle: "Прогноз дефицита и расчёт рекомендуемого пополнения",
+    title: "Склады, остатки и поставки",
+    subtitle: "Покрытие запасов · маршруты поставок · остатки по складам · сверка учёта",
   },
   economics: {
     title: "Юнит-экономика",
     subtitle: "Формулы считаются кодом, а не языковой моделью",
   },
   reconciliation: {
-    title: "Сверка данных",
-    subtitle: "Контроль расхождений между маркетплейсом и учётной системой",
+    title: "Склады, остатки и поставки",
+    subtitle: "Покрытие запасов · маршруты поставок · остатки по складам · сверка учёта",
   },
   audit: {
     title: "Журнал действий",
@@ -421,16 +421,10 @@ export function ControlCenter() {
               }}
             />
           )}
-          {section === "inventory" && (
-            <Inventory
-              items={inventory}
-              created={createdSupplies}
-              onCreate={createSupply}
-            />
-          )}
+          {section === "inventory" && <InventoryCenter initialTab="stock" />}
           {section === "economics" && <Economics rows={economics} />}
           {section === "reconciliation" && (
-            <Reconciliation rows={reconciliations} />
+            <InventoryCenter initialTab="reconciliation" />
           )}
           {section === "audit" && <Audit events={audit} />}
           {section === "integrations" && <IntegrationsPanel />}
