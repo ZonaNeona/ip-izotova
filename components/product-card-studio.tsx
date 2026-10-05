@@ -9,9 +9,12 @@ import {
   CircleHelp,
   FileSearch,
   Film,
+  Globe2,
   ImagePlus,
   Images,
+  Link2,
   LoaderCircle,
+  PackageSearch,
   RefreshCw,
   Save,
   Search,
@@ -70,14 +73,28 @@ type MediaItem = {
   aspectRatio: string;
   image: string | null;
   mode: "live" | "demo";
+  model?: string | null;
   cost?: number | null;
   latency?: number | null;
   warning?: string | null;
 };
 
+type StudioMode = "catalog" | "scratch";
 type StudioTab = "content" | "media" | "attributes" | "research";
-type ChannelTarget = "both" | "wb" | "ozon";
 type VideoFormat = "vertical" | "horizontal" | "square";
+
+type SourcePack = {
+  product: { id: string; sku: string; name: string; brand: string; model: string; category: string; sourceImageUrl: string | null };
+  wb: { subjectId: number | null; subjectName: string | null; availableCharacteristics: Array<{ id: number; name: string; required: boolean; filter: boolean }> };
+  specs: Record<string, string>;
+  attributes: Array<{ wbCharacteristicId: number; name: string; value: string; sourceUrl: string; confidence: string; evidence: string }>;
+  benefits: string[];
+  summary: string;
+  sources: Array<{ title: string; url: string }>;
+  confidence: string;
+  image: { publicUrl: string | null; originalUrl: string | null; stored: boolean };
+  warning: string | null;
+};
 
 const mediaRoles: Array<{
   kind: MediaKind;
@@ -88,41 +105,38 @@ const mediaRoles: Array<{
   {
     kind: "main",
     title: "Главная",
-    subtitle: "Чистый hero-кадр товара",
-    ratio: "1:1",
+    subtitle: "Яркий hero-слайд + ключевые преимущества",
+    ratio: "3:4",
   },
   {
     kind: "secondary",
     title: "Вспомогательная",
-    subtitle: "Товар в среде использования",
-    ratio: "2:3",
+    subtitle: "Сценарий использования + инфографика",
+    ratio: "3:4",
   },
   {
     kind: "technical",
     title: "Техническая",
-    subtitle: "Ракурс + детали без выдуманных подписей",
-    ratio: "1:1",
+    subtitle: "Характеристики + детали товара",
+    ratio: "3:4",
   },
 ];
-
-function channelTitle(value: ChannelTarget) {
-  if (value === "wb") return "Wildberries";
-  if (value === "ozon") return "Ozon";
-  return "WB + Ozon";
-}
 
 export function ProductCardStudio({
   onGenerate,
 }: {
   onGenerate: () => void;
 }) {
+  const [studioMode, setStudioMode] = useState<StudioMode>("catalog");
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [productSearch, setProductSearch] = useState("");
   const [selectedSku, setSelectedSku] = useState("");
-  const [targetChannel, setTargetChannel] =
-    useState<ChannelTarget>("both");
   const [researchEnabled, setResearchEnabled] = useState(false);
+  const [scratchName, setScratchName] = useState("");
+  const [scratchUrl, setScratchUrl] = useState("");
+  const [sourcePack, setSourcePack] = useState<SourcePack | null>(null);
+  const [discovering, setDiscovering] = useState(false);
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [sourceName, setSourceName] = useState<string | null>(null);
 
@@ -162,18 +176,26 @@ export function ProductCardStudio({
     [catalog, selectedSku],
   );
 
+  const activeProduct =
+    studioMode === "catalog"
+      ? selectedProduct
+      : sourcePack
+        ? {
+            id: sourcePack.product.id,
+            sku: sourcePack.product.sku,
+            name: sourcePack.product.name,
+            brand: sourcePack.product.brand,
+            category: sourcePack.product.category,
+            thumbnailUrl: sourcePack.product.sourceImageUrl,
+          }
+        : null;
+
   useEffect(() => {
-    if (!selectedProduct) return;
+    if (studioMode !== "catalog" || !selectedProduct) return;
     setSourceImage(selectedProduct.thumbnailUrl);
     setSourceName(selectedProduct.thumbnailUrl ? "Фото из каталога" : null);
-    setDraftId(null);
-    setContent(null);
-    setMedia({});
-    setSelectedMediaId(null);
-    setVideoUrl(null);
-    setError(null);
-    setSavedMessage(null);
-  }, [selectedProduct?.sku]);
+    resetGenerated();
+  }, [selectedProduct?.sku, studioMode]);
 
   const filteredCatalog = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -185,6 +207,76 @@ export function ProductCardStudio({
         item.brand.toLowerCase().includes(query),
     );
   }, [catalog, productSearch]);
+
+  function resetGenerated() {
+    setDraftId(null);
+    setContent(null);
+    setMedia({});
+    setSelectedMediaId(null);
+    setSelectedMediaKind("main");
+    setVideoUrl(null);
+    setVideoMessage(null);
+    setSavedMessage(null);
+    setError(null);
+  }
+
+  function switchMode(mode: StudioMode) {
+    if (mode === studioMode) return;
+    setStudioMode(mode);
+    resetGenerated();
+    if (mode === "catalog") {
+      setSourcePack(null);
+      setSourceImage(selectedProduct?.thumbnailUrl ?? null);
+      setSourceName(selectedProduct?.thumbnailUrl ? "Фото из каталога" : null);
+    } else {
+      setSourceImage(null);
+      setSourceName(null);
+    }
+  }
+
+  async function discoverProduct() {
+    if (!scratchName.trim() || discovering) return;
+    setDiscovering(true);
+    setSourcePack(null);
+    setSourceImage(null);
+    setSourceName(null);
+    resetGenerated();
+
+    try {
+      const response = await fetch("/api/product-studio/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: scratchName.trim(),
+          url: scratchUrl.trim() || null,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error ?? "Не удалось найти товар.");
+      }
+
+      const pack = payload as SourcePack & { ok: boolean };
+      setSourcePack(pack);
+      setSourceImage(pack.image.publicUrl);
+      setSourceName(
+        pack.image.stored
+          ? "Найдено и сохранено автоматически"
+          : pack.image.publicUrl
+            ? "Найдено в интернете"
+            : null,
+      );
+      if (pack.warning) setError(pack.warning);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Не удалось найти фото и характеристики.",
+      );
+    } finally {
+      setDiscovering(false);
+    }
+  }
 
   function onFile(file?: File) {
     if (!file) return;
@@ -230,6 +322,7 @@ export function ProductCardStudio({
         mode: payload.mode === "live" ? "live" : "demo",
         cost: payload.cost ?? null,
         latency: payload.latency ?? null,
+        model: payload.model ?? null,
         warning: payload.warning ?? null,
       };
 
@@ -247,7 +340,7 @@ export function ProductCardStudio({
   }
 
   async function generatePackage() {
-    if (!selectedProduct || generating) return;
+    if (!activeProduct || !sourceImage || generating) return;
 
     setGenerating(true);
     setError(null);
@@ -261,9 +354,9 @@ export function ProductCardStudio({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sku: selectedProduct.sku,
-          targetChannel,
-          researchEnabled,
+          sku: activeProduct.sku,
+          sourceMode: studioMode,
+          researchEnabled: studioMode === "catalog" ? researchEnabled : false,
           sourceImage,
         }),
       });
@@ -285,7 +378,7 @@ export function ProductCardStudio({
       const failed = results.filter((result) => result.status === "rejected");
       if (failed.length) {
         setError(
-          `Карточка создана, но ${failed.length} изображ. не удалось сгенерировать. Их можно перегенерировать отдельно.`,
+          `Текст и характеристики готовы, но ${failed.length} из 3 изображений не удалось создать. Повторите генерацию только проблемного слайда.`,
         );
       }
 
@@ -393,71 +486,224 @@ export function ProductCardStudio({
         <div className="studio-panel-head">
           <div>
             <span className="eyebrow">Шаг 1</span>
-            <h2>Товар и источники</h2>
+            <h2>Источник товара</h2>
           </div>
           <span className="studio-draft-chip">
             {draftId ? "Черновик создан" : "Новый пакет"}
           </span>
         </div>
 
-        <label className="studio-label">Товар из каталога</label>
-        <div className="studio-product-search search-box">
-          <Search size={16} />
-          <input
-            value={productSearch}
-            onChange={(event) => setProductSearch(event.target.value)}
-            placeholder="Название, SKU или бренд"
-          />
+        <div className="studio-mode-switch">
+          <button
+            className={studioMode === "catalog" ? "active" : ""}
+            onClick={() => switchMode("catalog")}
+          >
+            <Images size={15} />
+            Из каталога
+          </button>
+          <button
+            className={studioMode === "scratch" ? "active" : ""}
+            onClick={() => switchMode("scratch")}
+          >
+            <Globe2 size={15} />
+            С нуля
+          </button>
         </div>
 
-        <div className="studio-product-list">
-          {catalogLoading ? (
-            <div className="studio-small-loading">
-              <LoaderCircle size={16} /> Загружаем каталог…
+        {studioMode === "catalog" ? (
+          <>
+            <label className="studio-label">Товар из каталога</label>
+            <div className="studio-product-search search-box">
+              <Search size={16} />
+              <input
+                value={productSearch}
+                onChange={(event) => setProductSearch(event.target.value)}
+                placeholder="Название, SKU или бренд"
+              />
             </div>
-          ) : (
-            filteredCatalog.slice(0, 12).map((item) => (
-              <button
-                key={item.id}
-                className={
-                  selectedSku === item.sku
-                    ? "studio-product-option active"
-                    : "studio-product-option"
-                }
-                onClick={() => {
-                  setSelectedSku(item.sku);
-                  setProductSearch("");
-                }}
-              >
-                <span className="studio-product-mini-thumb">
-                  {item.thumbnailUrl ? (
-                    <img src={item.thumbnailUrl} alt="" />
-                  ) : (
-                    <ImagePlus size={16} />
-                  )}
-                </span>
-                <span>
-                  <strong>{item.name}</strong>
-                  <small>{item.sku} · {item.category}</small>
-                </span>
-                {selectedSku === item.sku && <Check size={15} />}
-              </button>
-            ))
-          )}
-        </div>
 
-        {selectedProduct && (
+            <div className="studio-product-list">
+              {catalogLoading ? (
+                <div className="studio-small-loading">
+                  <LoaderCircle size={16} /> Загружаем каталог…
+                </div>
+              ) : (
+                filteredCatalog.slice(0, 12).map((item) => (
+                  <button
+                    key={item.id}
+                    className={
+                      selectedSku === item.sku
+                        ? "studio-product-option active"
+                        : "studio-product-option"
+                    }
+                    onClick={() => {
+                      setSelectedSku(item.sku);
+                      setProductSearch("");
+                    }}
+                  >
+                    <span className="studio-product-mini-thumb">
+                      {item.thumbnailUrl ? (
+                        <img src={item.thumbnailUrl} alt="" />
+                      ) : (
+                        <ImagePlus size={16} />
+                      )}
+                    </span>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <small>{item.sku} · {item.category}</small>
+                    </span>
+                    {selectedSku === item.sku && <Check size={15} />}
+                  </button>
+                ))
+              )}
+            </div>
+
+            <label className="studio-research-toggle">
+              <input
+                type="checkbox"
+                checked={researchEnabled}
+                onChange={(event) => setResearchEnabled(event.target.checked)}
+              />
+              <span>
+                <FileSearch size={17} />
+                <span>
+                  <strong>Дополнить характеристики из интернета</strong>
+                  <small>
+                    Каталог остаётся главным источником, интернет — только для
+                    подтверждения недостающих фактов.
+                  </small>
+                </span>
+              </span>
+            </label>
+          </>
+        ) : (
+          <div className="studio-scratch-form">
+            <label>
+              <span>Название товара *</span>
+              <input
+                value={scratchName}
+                onChange={(event) => setScratchName(event.target.value)}
+                placeholder="Например: Xiaomi Electric Kettle 2"
+              />
+            </label>
+
+            <label>
+              <span>
+                Ссылка на товар <em>необязательно</em>
+              </span>
+              <div className="studio-url-field">
+                <Link2 size={15} />
+                <input
+                  value={scratchUrl}
+                  onChange={(event) => setScratchUrl(event.target.value)}
+                  placeholder="Официальный сайт или магазин"
+                />
+              </div>
+            </label>
+
+            <button
+              className="secondary-button studio-discover-button"
+              onClick={discoverProduct}
+              disabled={!scratchName.trim() || discovering}
+            >
+              {discovering ? (
+                <LoaderCircle size={15} className="spin" />
+              ) : (
+                <PackageSearch size={15} />
+              )}
+              {discovering
+                ? "Ищем фото и характеристики…"
+                : "Найти фото и характеристики"}
+            </button>
+
+            {sourcePack && (
+              <div className="studio-source-pack">
+                <div className="studio-source-pack-head">
+                  <span>Найденный товар</span>
+                  <i className={sourcePack.image.stored ? "stored" : ""}>
+                    {sourcePack.image.stored
+                      ? "Фото сохранено"
+                      : sourcePack.image.publicUrl
+                        ? "Фото найдено"
+                        : "Фото не найдено"}
+                  </i>
+                </div>
+
+                <div className="studio-source-pack-product">
+                  <span className="studio-source-pack-image">
+                    {sourcePack.image.publicUrl ? (
+                      <img
+                        src={sourcePack.image.publicUrl}
+                        alt={sourcePack.product.name}
+                      />
+                    ) : (
+                      <ImagePlus size={26} />
+                    )}
+                  </span>
+                  <div>
+                    <strong>{sourcePack.product.name}</strong>
+                    <span>
+                      {sourcePack.product.brand}
+                      {sourcePack.product.model
+                        ? " · " + sourcePack.product.model
+                        : ""}
+                    </span>
+                    <small>
+                      {sourcePack.wb.subjectName
+                        ? "WB: " + sourcePack.wb.subjectName
+                        : sourcePack.product.category}
+                    </small>
+                  </div>
+                </div>
+
+                <div className="studio-source-pack-stats">
+                  <span>
+                    <strong>{Object.keys(sourcePack.specs).length}</strong>
+                    характеристик
+                  </span>
+                  <span>
+                    <strong>{sourcePack.sources.length}</strong>
+                    источников
+                  </span>
+                  <span>
+                    <strong>{sourcePack.confidence}</strong>
+                    уверенность
+                  </span>
+                </div>
+
+                <div className="studio-source-pack-specs">
+                  {Object.entries(sourcePack.specs)
+                    .slice(0, 6)
+                    .map(([name, value]) => (
+                      <div key={name}>
+                        <span>{name}</span>
+                        <strong>{value}</strong>
+                      </div>
+                    ))}
+                </div>
+
+                {sourcePack.summary && (
+                  <p className="studio-source-pack-summary">
+                    {sourcePack.summary}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeProduct && (
           <div className="studio-selected-product">
             <span className="studio-product-preview">
               {sourceImage ? (
-                <img src={sourceImage} alt={selectedProduct.name} />
+                <img src={sourceImage} alt={activeProduct.name} />
               ) : (
                 <ImagePlus size={28} />
               )}
             </span>
             <div>
-              <strong>{selectedProduct.name}</strong>
-              <span>{selectedProduct.sku} · {selectedProduct.brand}</span>
+              <strong>{activeProduct.name}</strong>
+              <span>{activeProduct.sku} · {activeProduct.brand}</span>
             </div>
           </div>
         )}
@@ -466,9 +712,14 @@ export function ProductCardStudio({
           <Upload size={18} />
           <span>
             <strong>Исходное фото</strong>
-            <small>{sourceName ?? "Можно использовать фото из каталога"}</small>
+            <small>
+              {sourceName ??
+                (studioMode === "scratch"
+                  ? "Система попробует найти фото сама"
+                  : "Можно использовать фото из каталога")}
+            </small>
           </span>
-          <em>Заменить</em>
+          <em>{sourceImage ? "Заменить" : "Загрузить"}</em>
           <input
             type="file"
             accept="image/*"
@@ -476,47 +727,21 @@ export function ProductCardStudio({
           />
         </label>
 
-        <div className="studio-field-block">
-          <label className="studio-label">Куда готовим карточку</label>
-          <div className="studio-segment">
-            {([
-              ["both", "WB + Ozon"],
-              ["wb", "WB"],
-              ["ozon", "Ozon"],
-            ] as Array<[ChannelTarget, string]>).map(([value, label]) => (
-              <button
-                key={value}
-                className={targetChannel === value ? "active" : ""}
-                onClick={() => setTargetChannel(value)}
-              >
-                {label}
-              </button>
-            ))}
+        <div className="studio-wb-format-note">
+          <ShieldCheck size={16} />
+          <div>
+            <strong>Wildberries · 3 слайда · 3:4</strong>
+            <span>
+              Главная, вспомогательная и техническая карточки создаются одним
+              ярким визуальным сетом.
+            </span>
           </div>
         </div>
-
-        <label className="studio-research-toggle">
-          <input
-            type="checkbox"
-            checked={researchEnabled}
-            onChange={(event) => setResearchEnabled(event.target.checked)}
-          />
-          <span>
-            <FileSearch size={17} />
-            <span>
-              <strong>Дополнить из интернета</strong>
-              <small>
-                Только подтверждённые факты конкретной модели. Каталог всегда
-                имеет приоритет.
-              </small>
-            </span>
-          </span>
-        </label>
 
         <button
           className="primary-button studio-generate-all"
           onClick={generatePackage}
-          disabled={!selectedProduct || generating}
+          disabled={!activeProduct || !sourceImage || generating}
         >
           {generating ? (
             <LoaderCircle size={17} className="spin" />
@@ -524,9 +749,16 @@ export function ProductCardStudio({
             <Sparkles size={17} />
           )}
           {generating
-            ? "Создаём пакет карточки…"
-            : "Создать текст + 3 изображения"}
+            ? "Создаём 3 WB-карточки…"
+            : "Создать 3 карточки Wildberries"}
         </button>
+
+        {!sourceImage && activeProduct && (
+          <div className="studio-source-warning">
+            <CircleHelp size={15} />
+            Для точной генерации нужно исходное фото товара.
+          </div>
+        )}
 
         {error && <div className="studio-error">{error}</div>}
       </aside>
@@ -537,16 +769,17 @@ export function ProductCardStudio({
             <div className="studio-empty-icon">
               <WandSparkles size={34} />
             </div>
-            <strong>Профессиональная студия карточки</strong>
+            <strong>Студия карточек Wildberries</strong>
             <p>
-              Выберите товар слева. За один запуск система подготовит текст,
-              характеристики и три связанных изображения в едином стиле.
+              Выберите товар из каталога или найдите его с нуля. Система
+              подготовит описание, характеристики и три ярких вертикальных
+              слайда Wildberries с инфографикой.
             </p>
             <div className="studio-empty-steps">
-              <span><Bot size={14} /> Описание и SEO</span>
-              <span><Images size={14} /> 3 медиароли</span>
+              <span><Globe2 size={14} /> Web-поиск товара</span>
+              <span><ShieldCheck size={14} /> Справочник WB</span>
+              <span><Images size={14} /> 3 слайда 3:4</span>
               <span><Film size={14} /> Видео из кадра</span>
-              <span><ShieldCheck size={14} /> Проверка фактов</span>
             </div>
           </div>
         ) : (
@@ -554,12 +787,16 @@ export function ProductCardStudio({
             <header className="studio-workspace-head">
               <div>
                 <span className="eyebrow">
-                  {channelTitle(targetChannel)} · пакет карточки
+                  Wildberries · пакет карточки
                 </span>
-                <h2>{selectedProduct?.name}</h2>
+                <h2>{activeProduct?.name}</h2>
                 <p>
                   {draftId ? `Черновик ${draftId.slice(0, 8)}` : "Черновик"} ·{" "}
-                  {researchEnabled ? "с web‑проверкой" : "по данным каталога"}
+                  {studioMode === "scratch"
+                    ? "товар найден автоматически"
+                    : researchEnabled
+                      ? "каталог + web‑проверка"
+                      : "по данным каталога"}
                 </p>
               </div>
               <div className="studio-head-actions">
@@ -614,11 +851,9 @@ export function ProductCardStudio({
                   <div className="studio-section-title">
                     <div>
                       <span className="eyebrow">Шаг 2</span>
-                      <h3>Три изображения в одном стиле</h3>
+                      <h3>Три готовых WB-слайда</h3>
                     </div>
-                    <span>
-                      Нажмите на кадр, чтобы использовать его для видео
-                    </span>
+                    <span>Все изображения · вертикальные 3:4</span>
                   </div>
 
                   <div className="studio-media-grid">
@@ -648,11 +883,11 @@ export function ProductCardStudio({
                             <i>{role.ratio}</i>
                           </div>
 
-                          <div className="studio-media-frame">
+                          <div className="studio-media-frame wb-card">
                             {busy ? (
                               <div className="studio-media-loading">
                                 <LoaderCircle size={24} className="spin" />
-                                <span>Генерируем…</span>
+                                <span>Генерируем WB-слайд…</span>
                               </div>
                             ) : item?.image ? (
                               <img src={item.image} alt={role.title} />
@@ -672,10 +907,10 @@ export function ProductCardStudio({
                           <div className="studio-media-card-foot">
                             <span>
                               {item?.mode === "live"
-                                ? "Сгенерировано"
-                                : item?.image
-                                  ? "Резервный кадр"
-                                  : "Ожидает генерации"}
+                                ? item.model?.includes("nano")
+                                  ? "Nano Banana 2"
+                                  : "Сгенерировано"
+                                : "Ожидает генерации"}
                             </span>
                             <button
                               onClick={(event) => {
@@ -706,7 +941,7 @@ export function ProductCardStudio({
                       </div>
                       <div>
                         <span className="eyebrow">Шаг 3</span>
-                        <h3>Видео из выбранного кадра</h3>
+                        <h3>Видео из выбранной карточки</h3>
                         <p>
                           Источник:{" "}
                           {mediaRoles.find(
@@ -787,7 +1022,7 @@ export function ProductCardStudio({
 
                   <div className="studio-editor-block">
                     <div className="studio-editor-head">
-                      <strong>Преимущества</strong>
+                      <strong>Тезисы для инфографики</strong>
                       <button
                         onClick={() =>
                           setContent({
@@ -901,13 +1136,29 @@ export function ProductCardStudio({
                     <div>
                       <span className="eyebrow">Проверка источников</span>
                       <h3>
-                        {researchEnabled
-                          ? "Web‑research включён"
-                          : "Только внутренний каталог"}
+                        {studioMode === "scratch"
+                          ? "Товар найден автоматически"
+                          : researchEnabled
+                            ? "Web‑research включён"
+                            : "Только внутренний каталог"}
                       </h3>
                       <p>{content.researchSummary}</p>
                     </div>
                   </div>
+
+                  {sourcePack?.wb.subjectName && (
+                    <div className="studio-wb-taxonomy">
+                      <ShieldCheck size={16} />
+                      <div>
+                        <span>Предмет Wildberries</span>
+                        <strong>{sourcePack.wb.subjectName}</strong>
+                        <small>
+                          ID {sourcePack.wb.subjectId ?? "—"} · доступно полей:{" "}
+                          {sourcePack.wb.availableCharacteristics.length}
+                        </small>
+                      </div>
+                    </div>
+                  )}
 
                   {content.researchSources.length > 0 ? (
                     <div className="studio-research-sources">
@@ -927,19 +1178,37 @@ export function ProductCardStudio({
                         </a>
                       ))}
                     </div>
+                  ) : sourcePack?.sources.length ? (
+                    <div className="studio-research-sources">
+                      {sourcePack.sources.map((source) => (
+                        <a
+                          key={source.url}
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          <Globe2 size={15} />
+                          <span>
+                            <strong>{source.title}</strong>
+                            <small>{source.url}</small>
+                          </span>
+                          <ChevronRight size={15} />
+                        </a>
+                      ))}
+                    </div>
                   ) : (
                     <div className="studio-no-sources">
                       <CircleHelp size={21} />
                       <strong>Внешние источники не использованы</strong>
                       <span>
-                        Это нормально: для demo‑товаров система не добавляет
-                        характеристики, которые не удалось подтвердить.
+                        Система не добавляет характеристики, которые не удалось
+                        подтвердить.
                       </span>
                     </div>
                   )}
 
                   <div className="studio-visual-dna">
-                    <span className="eyebrow">Единый стиль медиа</span>
+                    <span className="eyebrow">Единый стиль трёх WB-слайдов</span>
                     <div>
                       <span>
                         <strong>Фон</strong>

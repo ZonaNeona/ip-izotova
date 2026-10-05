@@ -6,24 +6,6 @@ import {
   uploadBytesToPublicBucket,
 } from "@/lib/supabase-storage";
 
-type ProductRow = {
-  id: string;
-  sku: string;
-  name: string;
-  brand: string;
-  category: string;
-  warranty_months: number;
-  specs: Record<string, string | number | boolean>;
-  thumbnail_path: string | null;
-};
-
-type StudioRequest = {
-  sku?: string;
-  targetChannel?: "both" | "wb" | "ozon";
-  researchEnabled?: boolean;
-  sourceImage?: string | null;
-};
-
 type Attribute = {
   name: string;
   value: string;
@@ -34,6 +16,45 @@ type ResearchSource = {
   title: string;
   url: string;
   verifiedFact: string;
+};
+
+type SourceMetadata = {
+  researchSummary?: string;
+  researchSources?: Array<{
+    title?: string;
+    url?: string;
+    verifiedFact?: string;
+  }>;
+  benefits?: string[];
+  model?: string;
+};
+
+type ProductRow = {
+  id: string;
+  sku: string;
+  name: string;
+  brand: string;
+  category: string;
+  warranty_months: number;
+  specs: Record<string, string | number | boolean>;
+  thumbnail_path: string | null;
+  source: string;
+  source_url: string | null;
+  source_metadata: SourceMetadata | null;
+  wb_subject_id: number | null;
+  wb_subject_name: string | null;
+  wb_characteristics: Array<{
+    name?: string;
+    value?: string;
+    sourceUrl?: string;
+  }> | null;
+};
+
+type StudioRequest = {
+  sku?: string;
+  researchEnabled?: boolean;
+  sourceImage?: string | null;
+  sourceMode?: "catalog" | "scratch";
 };
 
 type CardAnswer = {
@@ -86,7 +107,7 @@ const schema = {
     attributes: {
       type: "array",
       minItems: 1,
-      maxItems: 24,
+      maxItems: 28,
       items: {
         type: "object",
         additionalProperties: false,
@@ -101,7 +122,7 @@ const schema = {
     researchSummary: { type: "string" },
     researchSources: {
       type: "array",
-      maxItems: 6,
+      maxItems: 8,
       items: {
         type: "object",
         additionalProperties: false,
@@ -128,15 +149,19 @@ const schema = {
 };
 
 function catalogAttributes(product: ProductRow): Attribute[] {
+  const source: Attribute["source"] =
+    product.source === "web_discovery" ? "Интернет" : "Каталог";
+
   const rows = Object.entries(product.specs ?? {}).map(([name, value]) => ({
     name,
     value: String(value),
-    source: "Каталог" as const,
+    source,
   }));
 
   if (
     product.warranty_months &&
-    !rows.some((item) => item.name.toLowerCase().includes("гаран"))
+    !rows.some((item) => item.name.toLowerCase().includes("гаран")) &&
+    product.source !== "web_discovery"
   ) {
     rows.push({
       name: "Гарантия",
@@ -148,6 +173,19 @@ function catalogAttributes(product: ProductRow): Attribute[] {
   return rows;
 }
 
+function metadataSources(product: ProductRow): ResearchSource[] {
+  const rows = product.source_metadata?.researchSources ?? [];
+
+  return rows
+    .filter((item) => Boolean(item.url))
+    .slice(0, 8)
+    .map((item) => ({
+      title: item.title?.trim() || "Источник",
+      url: item.url!.trim(),
+      verifiedFact: item.verifiedFact?.trim() || "Характеристики товара",
+    }));
+}
+
 function fallbackAnswer(product: ProductRow): CardAnswer {
   const attributes = catalogAttributes(product);
   const featureText = attributes
@@ -155,35 +193,45 @@ function fallbackAnswer(product: ProductRow): CardAnswer {
     .map((item) => `${item.name.toLowerCase()} — ${item.value}`)
     .join(", ");
 
+  const benefits =
+    product.source_metadata?.benefits?.filter(Boolean).slice(0, 6) ?? [];
+  const sources = metadataSources(product);
+
   return {
     title: product.name,
     description:
       `${product.name} — товар категории «${product.category}». ` +
-      `Ключевые характеристики из каталога: ${featureText}. ` +
-      "Описание сформировано только по подтверждённым данным товара.",
-    bullets: attributes.slice(0, 6).map(
-      (item) => `${item.name}: ${item.value}`,
-    ),
+      `Ключевые подтверждённые характеристики: ${featureText}. ` +
+      "Описание сформировано только по проверенным данным товара.",
+    bullets:
+      benefits.length >= 4
+        ? benefits
+        : attributes
+            .slice(0, 6)
+            .map((item) => `${item.name}: ${item.value}`),
     category: product.category,
     searchPhrases: [
       product.name.toLowerCase(),
       product.brand.toLowerCase(),
       product.category.toLowerCase(),
       `${product.brand} ${product.category}`.toLowerCase(),
-    ],
+    ].filter(Boolean),
     attributes,
     researchSummary:
-      "Использованы подтверждённые характеристики из внутреннего каталога.",
-    researchSources: [],
+      product.source_metadata?.researchSummary ||
+      (product.source === "web_discovery"
+        ? "Характеристики собраны и проверены по открытым источникам."
+        : "Использованы подтверждённые характеристики из внутреннего каталога."),
+    researchSources: sources,
     visualStyle: {
       background:
-        "светлый нейтральный фон с едва заметным холодно-лиловым градиентом",
+        "яркий современный градиент Wildberries: насыщенный фиолетовый, маджента, розовый и светлые контрастные зоны",
       lighting:
-        "мягкий премиальный студийный свет, естественные блики и аккуратная тень",
+        "чистый премиальный рекламный свет на товаре, объёмные блики, чёткое отделение товара от яркой инфографики",
       palette:
-        "белый, графитовый, натуральные материалы товара и очень деликатный ягодно-лиловый акцент",
+        "Wildberries vibe: фиолетовый, маджента, розовый, белый и графитовый с контрастными акцентами",
       mood:
-        "современная премиальная коммерческая съёмка маркетплейса без визуального шума",
+        "готовая яркая продающая карточка Wildberries с крупной мобильной типографикой, инфографикой и коммерческим wow-эффектом",
     },
   };
 }
@@ -203,11 +251,10 @@ async function persistSourceImage(
     : parsed.contentType.includes("jpeg")
       ? "jpg"
       : "webp";
-  const path = `sources/${productId}/${Date.now()}.${extension}`;
 
   const uploaded = await uploadBytesToPublicBucket({
     bucket: "product-studio-media",
-    path,
+    path: `sources/${productId}/manual-${Date.now()}.${extension}`,
     bytes: parsed.bytes,
     contentType: parsed.contentType,
   });
@@ -235,32 +282,38 @@ export async function POST(request: Request) {
   }
 
   const fallback = fallbackAnswer(product);
-  const researchEnabled = Boolean(body.researchEnabled);
+  const discovered = product.source === "web_discovery";
+  const shouldSearchWeb = Boolean(body.researchEnabled && !discovered);
 
   const result = await openRouterJson<CardAnswer>({
-    schemaName: "marketplace_product_studio_card",
+    schemaName: "wildberries_product_studio_card",
     schema,
     fallback,
-    webSearch: researchEnabled,
+    webSearch: shouldSearchWeb,
+    webFetch: shouldSearchWeb,
     system:
-      "Ты senior e-commerce контент-редактор маркетплейса. Создай карточку товара на русском языке. " +
-      "Внутренний каталог — главный источник истины. Никогда не меняй и не опровергай факты из catalogSpecs. " +
-      "Если web search включён, используй интернет только для подтверждения или заполнения отсутствующих характеристик конкретной модели. " +
-      "Добавляй интернет-факт только если источник явно относится к этой модели и не противоречит каталогу. " +
-      "Не придумывай сертификаты, комплектацию, материалы, размеры, совместимость, мощность, гарантию или функции. " +
-      "Если надёжного факта нет — не добавляй его. researchSources должны содержать только реально использованные URL. " +
-      "Стиль текста: профессионально, спокойно, без крикливых обещаний. visualStyle должен описывать единый премиальный стиль для серии из трёх изображений.",
+      "Ты senior e-commerce контент-редактор Wildberries. Создай профессиональный контент карточки товара на русском языке. " +
+      "Работаем именно для Wildberries: короткий мобильный заголовок, сильные тезисы и конкретные характеристики. " +
+      "Главный принцип — ни одного выдуманного факта. catalogSpecs и discoveryContext являются источником истины. " +
+      "Если web search включён, интернет можно использовать только для подтверждения или заполнения отсутствующих характеристик ТОЧНОЙ модели. " +
+      "Не придумывай размеры, материалы, мощность, комплектацию, совместимость, гарантию, сертификаты или функции. " +
+      "bullets должны быть короткими и пригодными как текстовые тезисы для инфографики на изображении Wildberries. " +
+      "Каждый тезис желательно 2–6 слов + конкретное значение, если оно подтверждено. " +
+      "visualStyle должен описывать единый яркий дизайн-сет из трёх вертикальных 3:4 слайдов Wildberries: насыщенный цвет, крупная инфографика, мобильная читаемость, один визуальный язык.",
     user: JSON.stringify({
-      targetChannel: body.targetChannel ?? "both",
+      marketplace: "Wildberries",
       product: {
         sku: product.sku,
         name: product.name,
         brand: product.brand,
         category: product.category,
-        warrantyMonths: product.warranty_months,
+        wbSubjectId: product.wb_subject_id,
+        wbSubjectName: product.wb_subject_name,
       },
       catalogSpecs: product.specs ?? {},
-      webResearchRequested: researchEnabled,
+      wbMappedCharacteristics: product.wb_characteristics ?? [],
+      discoveryContext: product.source_metadata ?? {},
+      researchRequested: shouldSearchWeb,
     }),
   });
 
@@ -272,22 +325,35 @@ export async function POST(request: Request) {
         : null),
   );
 
+  const finalContent: CardAnswer = {
+    ...result.data,
+    researchSummary:
+      discovered && !result.data.researchSummary
+        ? fallback.researchSummary
+        : result.data.researchSummary,
+    researchSources:
+      discovered && result.data.researchSources.length === 0
+        ? fallback.researchSources
+        : result.data.researchSources,
+  };
+
   const inserted = await supabaseInsert<{
     id: string;
     product_id: string;
   }>("product_card_drafts", {
     product_id: product.id,
-    target_channel: body.targetChannel ?? "both",
+    target_channel: "wb",
+    source_mode: body.sourceMode ?? (discovered ? "scratch" : "catalog"),
     status: "draft",
-    title: result.data.title,
-    description: result.data.description,
-    bullets: result.data.bullets,
-    attributes: result.data.attributes,
-    search_phrases: result.data.searchPhrases,
-    research_enabled: researchEnabled,
-    research_summary: result.data.researchSummary,
-    research_sources: result.data.researchSources,
-    visual_style: result.data.visualStyle,
+    title: finalContent.title,
+    description: finalContent.description,
+    bullets: finalContent.bullets,
+    attributes: finalContent.attributes,
+    search_phrases: finalContent.searchPhrases,
+    research_enabled: discovered || Boolean(body.researchEnabled),
+    research_summary: finalContent.researchSummary,
+    research_sources: finalContent.researchSources,
+    visual_style: finalContent.visualStyle,
     source_image_url: sourceImageUrl,
     generated_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -312,8 +378,10 @@ export async function POST(request: Request) {
       brand: product.brand,
       category: product.category,
       specs: product.specs ?? {},
+      wbSubjectId: product.wb_subject_id,
+      wbSubjectName: product.wb_subject_name,
       sourceImageUrl,
     },
-    content: result.data,
+    content: finalContent,
   });
 }

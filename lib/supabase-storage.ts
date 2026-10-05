@@ -19,6 +19,44 @@ function storageHeaders(key: string, contentType: string) {
   };
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  attempts = 3,
+) {
+  let lastResponse: Response | null = null;
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(input, init);
+      lastResponse = response;
+
+      if (response.ok) return response;
+
+      const retryable =
+        response.status === 408 ||
+        response.status === 425 ||
+        response.status === 429 ||
+        response.status >= 500;
+
+      if (!retryable || attempt === attempts - 1) return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1) throw error;
+    }
+
+    await sleep(350 * 2 ** attempt);
+  }
+
+  if (lastResponse) return lastResponse;
+  throw lastError ?? new Error("Network request failed");
+}
+
 export async function uploadBytesToPublicBucket({
   bucket,
   path,
@@ -33,7 +71,7 @@ export async function uploadBytesToPublicBucket({
   const cfg = storageConfig();
   if (!cfg) return null;
 
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `${cfg.url}/storage/v1/object/${bucket}/${path
       .split("/")
       .map(encodeURIComponent)
@@ -77,7 +115,17 @@ export async function persistRemoteAsset({
   path: string;
   fallbackContentType: string;
 }): Promise<UploadResult | null> {
-  const response = await fetch(sourceUrl, { cache: "no-store" });
+  const response = await fetchWithRetry(
+    sourceUrl,
+    {
+      cache: "no-store",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; MarketplaceStudio/1.0; +https://vercel.app)",
+      },
+    },
+    3,
+  );
   if (!response.ok) {
     console.error("Failed to download generated asset", response.status);
     return null;
