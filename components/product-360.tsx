@@ -357,10 +357,32 @@ export function Product360({
 
   if (loading || !data) {
     return (
-      <div className="p360-loading card">
-        <RefreshCw size={24} />
-        <strong>Загружаем Product 360…</strong>
-        <span>Продажи, реклама, экономика, конкуренты и рекомендации</span>
+      <div className="p360-skeleton">
+        <div className="card p360-skeleton-hero">
+          <div className="premium-skeleton p360-skeleton-image" />
+          <div className="p360-skeleton-copy">
+            <div className="premium-skeleton p360-skeleton-line wide" />
+            <div className="premium-skeleton p360-skeleton-line medium" />
+            <div className="premium-skeleton p360-skeleton-line short" />
+          </div>
+          <div className="p360-skeleton-marketplaces">
+            <div className="premium-skeleton" />
+            <div className="premium-skeleton" />
+          </div>
+        </div>
+        <div className="p360-skeleton-kpis">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div className="card p360-skeleton-kpi" key={index}>
+              <div className="premium-skeleton small" />
+              <div className="premium-skeleton large" />
+              <div className="premium-skeleton tiny" />
+            </div>
+          ))}
+        </div>
+        <div className="p360-skeleton-main">
+          <div className="card premium-skeleton" />
+          <div className="card premium-skeleton" />
+        </div>
       </div>
     );
   }
