@@ -12,19 +12,19 @@ import {
   Sparkles,
 } from "lucide-react";
 
-тип Subject = {
-  ID предмета: number;
+type Subject = {
+  subjectID: number;
   parentID: number;
   subjectName: string;
   parentName: string;
 };
 
-тип Characteristic = {
+type Characteristic = {
   charcID: number;
   subjectName: string;
-  ID предмета: number;
+  subjectID: number;
   name: string;
-  обязательно: boolean;
+  required: boolean;
   isRequiredForCreate?: boolean;
   hasFilter?: boolean;
   existNamedField?: boolean;
@@ -34,22 +34,22 @@ import {
   charcType?: number;
 };
 
-тип ApiPayload<T> = {
+type ApiPayload<T> = {
   data?: T;
   error?: boolean | string;
   errorText?: string;
   additionalErrors?: unknown;
 };
 
-тип CreatedCard = {
+type CreatedCard = {
   nmID: number;
   vendorCode: string;
-  ID предмета: number;
+  subjectID: number;
   subjectName?: string | null;
   title?: string;
   brand?: string;
-  ID варианта?: number | null;
-  штрихкод?: string | null;
+  chrtID?: number | null;
+  barcode?: string | null;
 };
 
 function buildVendorCode() {
@@ -82,29 +82,29 @@ export function WbSandboxLab() {
   const [createdCard, setCreatedCard] = useState<CreatedCard | null>(null);
   const [creationVerified, setCreationVerified] = useState(false);
 
-  const обязательно = useMemo(
+  const required = useMemo(
     () =>
-      characteristics.фильтр(
-        (item) => item.обязательно || item.isRequiredForCreate,
+      characteristics.filter(
+        (item) => item.required || item.isRequiredForCreate,
       ),
     [characteristics],
   );
 
   const keyRequired = useMemo(
     () =>
-      characteristics.фильтр(
-        (item) => item.обязательно && item.hasFilter,
+      characteristics.filter(
+        (item) => item.required && item.hasFilter,
       ),
     [characteristics],
   );
 
   const formCharacteristics = useMemo(
     () =>
-      characteristics.фильтр(
+      characteristics.filter(
         (item) =>
           !item.existNamedField &&
           item.charcType !== 0 &&
-          (item.обязательно || item.isRequiredForCreate),
+          (item.required || item.isRequiredForCreate),
       ),
     [characteristics],
   );
@@ -153,7 +153,7 @@ export function WbSandboxLab() {
 
     try {
       const response = await fetch(
-        `/api/integrations/wb/catalog?type=characteristics&subjectId=${subject.ID предмета}`,
+        `/api/integrations/wb/catalog?type=characteristics&subjectId=${subject.subjectID}`,
         { cache: "no-store" },
       );
       const payload = (await response.json()) as ApiPayload<Characteristic[]>;
@@ -182,7 +182,7 @@ export function WbSandboxLab() {
     setCreatedCard(null);
     setCreationVerified(false);
 
-    const missing = formCharacteristics.фильтр(
+    const missing = formCharacteristics.filter(
       (item) => !charValues[item.charcID]?.trim(),
     );
 
@@ -227,7 +227,7 @@ export function WbSandboxLab() {
         value: raw
           .split(",")
           .map((value) => value.trim())
-          .фильтр(Boolean),
+          .filter(Boolean),
       };
     });
 
@@ -252,7 +252,7 @@ export function WbSandboxLab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           internalSku,
-          subjectId: selected.ID предмета,
+          subjectId: selected.subjectID,
           vendorCode,
           title,
           description,
@@ -268,7 +268,7 @@ export function WbSandboxLab() {
         const missingNames = Array.isArray(payload.missing)
           ? payload.missing
               .map((item: { name?: string }) => item.name)
-              .фильтр(Boolean)
+              .filter(Boolean)
               .join(", ")
           : "";
 
@@ -278,7 +278,7 @@ export function WbSandboxLab() {
             payload.errorText,
             missingNames ? `Не заполнено: ${missingNames}` : null,
           ]
-            .фильтр(Boolean)
+            .filter(Boolean)
             .join(" · "),
         );
         return;
@@ -291,12 +291,12 @@ export function WbSandboxLab() {
         setCreatedCard({
           nmID: 0,
           vendorCode: payload.vendorCode ?? vendorCode,
-          ID предмета: selected.ID предмета,
+          subjectID: selected.subjectID,
           subjectName: selected.subjectName,
           title,
           brand,
-          штрихкод: payload.штрихкод ?? null,
-          ID варианта: null,
+          barcode: payload.barcode ?? null,
+          chrtID: null,
         });
       }
     } catch {
@@ -315,8 +315,8 @@ export function WbSandboxLab() {
           </span>
           <h2>Реальный справочник и создание карточек Wildberries</h2>
           <p>
-            Предметы и характеристики загружаются напрямую из API контента
-            в песочнице WB. Создание выполняется только в изолированном тестовом
+            Предметы и характеристики загружаются напрямую из Content API
+            Sandbox. Создание выполняется только в изолированном тестовом
             контуре Wildberries.
           </p>
         </div>
@@ -364,9 +364,9 @@ export function WbSandboxLab() {
             <div className="wb-subject-list">
               {subjects.map((subject) => (
                 <button
-                  key={subject.ID предмета}
+                  key={subject.subjectID}
                   className={
-                    selected?.ID предмета === subject.ID предмета
+                    selected?.subjectID === subject.subjectID
                       ? "wb-subject-row active"
                       : "wb-subject-row"
                   }
@@ -377,7 +377,7 @@ export function WbSandboxLab() {
                     <small>{subject.parentName}</small>
                   </span>
                   <span className="subject-id">
-                    #{subject.ID предмета}
+                    #{subject.subjectID}
                     <ChevronRight size={14} />
                   </span>
                 </button>
@@ -398,7 +398,7 @@ export function WbSandboxLab() {
             </div>
           ) : loadingCharacteristics ? (
             <div className="wb-lab-placeholder">
-              Загружаем характеристики предмета #{selected.ID предмета}...
+              Загружаем характеристики предмета #{selected.subjectID}...
             </div>
           ) : (
             <>
@@ -409,14 +409,14 @@ export function WbSandboxLab() {
                 </div>
                 <div>
                   <span>ID предмета</span>
-                  <strong>{selected.ID предмета}</strong>
+                  <strong>{selected.subjectID}</strong>
                 </div>
                 <div>
                   <span>Обязательных</span>
-                  <strong>{обязательно.length}</strong>
+                  <strong>{required.length}</strong>
                 </div>
                 <div>
-                  <span>Ключевых обязательных ключевых</span>
+                  <span>Ключевых обязательных</span>
                   <strong>{keyRequired.length}</strong>
                 </div>
               </div>
@@ -425,8 +425,8 @@ export function WbSandboxLab() {
                 {characteristics.map((char) => (
                   <div
                     className={
-                      char.обязательно || char.isRequiredForCreate
-                        ? "wb-char-row обязательно"
+                      char.required || char.isRequiredForCreate
+                        ? "wb-char-row required"
                         : "wb-char-row"
                     }
                     key={char.charcID}
@@ -439,8 +439,8 @@ export function WbSandboxLab() {
                       </small>
                     </div>
                     <div className="wb-char-tags">
-                      {(char.обязательно || char.isRequiredForCreate) && (
-                        <span className="обязательно-chip">
+                      {(char.required || char.isRequiredForCreate) && (
+                        <span className="required-chip">
                           <CheckCircle2 size={11} /> обязательно
                         </span>
                       )}
@@ -545,7 +545,7 @@ export function WbSandboxLab() {
             </label>
           </div>
 
-          <div className="wb-обязательно-fields">
+          <div className="wb-required-fields">
             <div className="panel-title">
               <span>Обязательные характеристики WB</span>
               <strong>{formCharacteristics.length}</strong>
@@ -557,7 +557,7 @@ export function WbSandboxLab() {
                 в массиве characteristics.
               </div>
             ) : (
-              <div className="wb-обязательно-grid">
+              <div className="wb-required-grid">
                 {formCharacteristics.map((char) => (
                   <label key={char.charcID}>
                     <span className="wb-field-label">
@@ -595,8 +595,8 @@ export function WbSandboxLab() {
 
           <div className="wb-create-actions">
             <div className="wb-create-note">
-              Песочница WB: сервер сам сгенерирует штрихкод, затем перечитает
-              карточку и сохранит идентификаторы маркетплейса в Supabase.
+              WB Sandbox: сервер сам сгенерирует barcode, затем перечитает
+              карточку и сохранит marketplace-ID в Supabase.
             </div>
             <button
               className="primary-button"
@@ -642,11 +642,11 @@ export function WbSandboxLab() {
                 </div>
                 <div>
                   <span>ID варианта</span>
-                  <strong>{createdCard.ID варианта ?? "—"}</strong>
+                  <strong>{createdCard.chrtID ?? "—"}</strong>
                 </div>
                 <div>
-                  <span>штрихкод</span>
-                  <strong>{createdCard.штрихкод ?? "—"}</strong>
+                  <span>Штрихкод</span>
+                  <strong>{createdCard.barcode ?? "—"}</strong>
                 </div>
               </div>
             </div>
