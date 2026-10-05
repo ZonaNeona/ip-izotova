@@ -58,28 +58,33 @@ export async function openRouterJson<T>({
         provider: {
           require_parameters: true,
         },
-        ...(webSearch
-          ? {
-              plugins: [
-                {
-                  id: "web",
-                  max_results: 8,
-                  search_prompt:
-                    "Search the public web thoroughly for the exact product/model in the user request. Prefer the official manufacturer, then major trustworthy retailers. Return evidence for exact model identity, specifications and the best source page containing a clean product image.",
-                },
-              ],
-            }
-          : {}),
-        ...(!webSearch && webFetch
+        ...((webSearch || webFetch)
           ? {
               tools: [
-                {
-                  type: "openrouter:web_fetch",
-                  parameters: {
-                    engine: "openrouter",
-                    max_content_tokens: 30000,
-                  },
-                },
+                ...(webSearch
+                  ? [
+                      {
+                        type: "openrouter:web_search",
+                        parameters: {
+                          engine: "auto",
+                          max_results: 8,
+                          max_total_results: 16,
+                          search_context_size: "medium",
+                        },
+                      },
+                    ]
+                  : []),
+                ...(webFetch
+                  ? [
+                      {
+                        type: "openrouter:web_fetch",
+                        parameters: {
+                          engine: "openrouter",
+                          max_content_tokens: 30000,
+                        },
+                      },
+                    ]
+                  : []),
               ],
             }
           : {}),
@@ -93,6 +98,7 @@ export async function openRouterJson<T>({
         },
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(150_000),
     });
 
     if (!response.ok) {
