@@ -74,9 +74,9 @@ function ProductMark({
 }) {
   if (thumbnailUrl) {
     return (
-      <div className="catalog-product-mark has-image">
-        <img src={thumbnailUrl} alt={name} />
-      </div>
+      <span className="catalog-product-mark has-image">
+        <img src={thumbnailUrl} alt={name} loading="lazy" />
+      </span>
     );
   }
 
@@ -87,7 +87,7 @@ function ProductMark({
     .join("")
     .toUpperCase();
 
-  return <div className="catalog-product-mark">{letters}</div>;
+  return <span className="catalog-product-mark">{letters}</span>;
 }
 
 export function ProductCatalog() {
@@ -335,24 +335,32 @@ export function ProductCatalog() {
                     : item.wbStock + item.ozonStock;
 
               return (
-                <button
+                <div
                   className="catalog-row catalog-data-row"
                   key={item.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedSku(item.sku)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedSku(item.sku);
+                    }
+                  }}
                 >
-                  <span className="catalog-product-cell">
+                  <div className="catalog-product-cell">
                     <ProductMark
                       category={item.category}
                       thumbnailUrl={item.thumbnailUrl}
                       name={item.name}
                     />
-                    <span>
+                    <div className="catalog-product-copy">
                       <strong>{item.name}</strong>
                       <small>{item.sku} · {item.category}</small>
-                    </span>
-                  </span>
+                    </div>
+                  </div>
 
-                  <span>
+                  <div className="catalog-cell catalog-channel-cell">
                     {channel === "all" ? (
                       <span className="channel-pair">
                         <i className="wb">WB</i>
@@ -363,33 +371,33 @@ export function ProductCatalog() {
                         {channel === "wb" ? "WB" : "OZ"}
                       </span>
                     )}
-                  </span>
+                  </div>
 
-                  <span>{new Intl.NumberFormat("ru-RU").format(price)} ₽</span>
-                  <span><strong>{rub(revenue)}</strong></span>
-                  <span>{new Intl.NumberFormat("ru-RU").format(units)}</span>
+                  <div className="catalog-cell">{new Intl.NumberFormat("ru-RU").format(price)} ₽</div>
+                  <div className="catalog-cell catalog-money"><strong>{rub(revenue)}</strong></div>
+                  <div className="catalog-cell">{new Intl.NumberFormat("ru-RU").format(units)}</div>
 
-                  <span>
+                  <div className="catalog-cell">
                     <b className={item.margin30d < 15 ? "catalog-bad" : item.margin30d > 25 ? "catalog-good" : ""}>
                       {pct(item.margin30d)}
                     </b>
-                  </span>
+                  </div>
 
-                  <span>
+                  <div className="catalog-cell">
                     <b className={item.drr30d > 20 ? "catalog-bad" : item.drr30d < 15 ? "catalog-good" : ""}>
                       {pct(item.drr30d)}
                     </b>
-                  </span>
+                  </div>
 
-                  <span>
+                  <div className="catalog-cell">
                     <b className={stock < 20 ? "catalog-bad" : ""}>{stock}</b>
-                  </span>
+                  </div>
 
-                  <span className={item.growth >= 0 ? "catalog-growth positive" : "catalog-growth negative"}>
+                  <div className={item.growth >= 0 ? "catalog-cell catalog-growth positive" : "catalog-cell catalog-growth negative"}>
                     {item.growth > 0 ? "+" : ""}{item.growth.toFixed(1)}%
-                  </span>
+                  </div>
 
-                  <span>
+                  <div className="catalog-cell catalog-status-cell">
                     {item.severity ? (
                       <span className={`catalog-issue ${item.severity}`}>
                         {item.incidentTitle}
@@ -397,12 +405,12 @@ export function ProductCatalog() {
                     ) : (
                       <span className="catalog-ok">Норма</span>
                     )}
-                  </span>
+                  </div>
 
-                  <span className="catalog-chevron">
+                  <div className="catalog-chevron">
                     <ChevronRight size={16} />
-                  </span>
-                </button>
+                  </div>
+                </div>
               );
             })}
           </div>
