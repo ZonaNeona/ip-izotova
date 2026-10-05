@@ -5,6 +5,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     reviewId?: string;
     product?: string;
+    answerText?: string;
   };
 
   if (!body.reviewId) {
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
   const updated = await supabasePatch("reviews", { id: body.reviewId }, {
     status: "answered",
     answered_at: answeredAt,
+    answer_text: body.answerText?.trim() || null,
   });
 
   if (!updated?.length) {
@@ -28,7 +30,9 @@ export async function POST(request: Request) {
   await supabaseInsert("audit_log", {
     actor: "AI Reviews + Оператор",
     action: `Ответ на отзыв по ${body.product ?? "товару"}`,
-    result: "Подтверждён и отправлен через Supabase Demo API",
+    result: body.answerText?.trim()
+      ? "Ответ подтверждён, отправлен и сохранён"
+      : "Ответ подтверждён и отправлен",
     tone: "success",
     entity_type: "review",
     entity_id: body.reviewId,
