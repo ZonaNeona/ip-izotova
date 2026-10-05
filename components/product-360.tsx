@@ -54,6 +54,7 @@ type Product360Data = {
     baseCost: number;
     launchDate: string | null;
     warrantyMonths: number;
+    thumbnailUrl: string | null;
   };
   channels: Array<{
     id: string;
@@ -393,9 +394,12 @@ export function Product360({
       <header className="p360-header">
         <div className="p360-product-avatar">
           {data.product.thumbnailUrl ? (
-            <img src={data.product.thumbnailUrl} alt={data.product.name} />
+            <img
+              src={data.product.thumbnailUrl}
+              alt={data.product.name}
+            />
           ) : (
-            <ShoppingBag size={26} />
+            <ShoppingBag size={30} />
           )}
         </div>
         <div className="p360-title">
@@ -412,16 +416,52 @@ export function Product360({
         <div className="p360-listings">
           {wb && (
             <div className="listing-badge wb">
-              <strong>WB</strong>
-              <span>{wb.listing.status}</span>
-              {wb.listing.externalProductId && <small>nmID {wb.listing.externalProductId}</small>}
+              <div className="listing-badge-head">
+                <strong>Wildberries</strong>
+                <span>{wb.listing.status}</span>
+              </div>
+              <div className="listing-badge-stats">
+                <div>
+                  <small>Цена</small>
+                  <b>{money(wb.listing.price)}</b>
+                </div>
+                <div>
+                  <small>Остаток</small>
+                  <b>{wb.listing.stock}</b>
+                </div>
+                <div>
+                  <small>Рейтинг</small>
+                  <b>{wb.listing.rating?.toFixed(2) ?? "—"}</b>
+                </div>
+              </div>
+              {wb.listing.externalProductId && (
+                <small className="listing-external-id">nmID {wb.listing.externalProductId}</small>
+              )}
             </div>
           )}
           {ozon && (
             <div className="listing-badge ozon">
-              <strong>Ozon</strong>
-              <span>{ozon.listing.status}</span>
-              {ozon.listing.externalProductId && <small>{ozon.listing.externalProductId}</small>}
+              <div className="listing-badge-head">
+                <strong>Ozon</strong>
+                <span>{ozon.listing.status}</span>
+              </div>
+              <div className="listing-badge-stats">
+                <div>
+                  <small>Цена</small>
+                  <b>{money(ozon.listing.price)}</b>
+                </div>
+                <div>
+                  <small>Остаток</small>
+                  <b>{ozon.listing.stock}</b>
+                </div>
+                <div>
+                  <small>Рейтинг</small>
+                  <b>{ozon.listing.rating?.toFixed(2) ?? "—"}</b>
+                </div>
+              </div>
+              {ozon.listing.externalProductId && (
+                <small className="listing-external-id">{ozon.listing.externalProductId}</small>
+              )}
             </div>
           )}
         </div>
