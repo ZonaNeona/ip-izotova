@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ProductCardStudio } from "@/components/product-card-studio";
+import { IntegrationsPanel } from "@/components/integrations-panel";
 import {
   Activity,
   AlertTriangle,
@@ -421,7 +422,7 @@ export function ControlCenter() {
             <Reconciliation rows={reconciliations} />
           )}
           {section === "audit" && <Audit events={audit} />}
-          {section === "integrations" && <Integrations />}
+          {section === "integrations" && <IntegrationsPanel />}
         </div>
       </main>
 
@@ -1224,70 +1225,5 @@ function Audit({ events }: { events: AuditEvent[] }) {
         ))}
       </div>
     </article>
-  );
-}
-
-function Integrations() {
-  const integrations = [
-    {
-      name: "Wildberries",
-      subtitle: "Demo adapter · реальный API подключается токеном",
-      status: "Demo",
-      icon: "WB",
-      tone: "purple",
-    },
-    {
-      name: "OpenRouter",
-      subtitle: "Тексты, классификация, объяснения",
-      status: "Ключ не задан",
-      icon: "AI",
-      tone: "blue",
-    },
-    {
-      name: "ImageRouter",
-      subtitle: "Генерация медиа для карточек",
-      status: "Ключ не задан",
-      icon: "IMG",
-      tone: "pink",
-    },
-    {
-      name: "Supabase",
-      subtitle: "Следующий этап: БД, auth, audit log",
-      status: "Не подключено",
-      icon: "DB",
-      tone: "green",
-    },
-    {
-      name: "Telegram",
-      subtitle: "Пульт руководителя и approvals",
-      status: "Запланировано",
-      icon: "TG",
-      tone: "cyan",
-    },
-    {
-      name: "1С / ERP",
-      subtitle: "Demo reconciliation adapter",
-      status: "Demo",
-      icon: "1C",
-      tone: "yellow",
-    },
-  ];
-
-  return (
-    <div className="integration-grid">
-      {integrations.map((item) => (
-        <article className="card integration-card" key={item.name}>
-          <div className={`integration-icon ${item.tone}`}>{item.icon}</div>
-          <div className="integration-copy">
-            <strong>{item.name}</strong>
-            <span>{item.subtitle}</span>
-          </div>
-          <span className={item.status === "Demo" ? "integration-status demo" : "integration-status"}>
-            {item.status}
-          </span>
-          <button className="secondary-button">Настроить</button>
-        </article>
-      ))}
-    </div>
   );
 }
