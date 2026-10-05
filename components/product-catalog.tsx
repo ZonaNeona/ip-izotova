@@ -30,6 +30,14 @@ type CatalogItem = {
   drr30d: number;
   wbRevenue30d: number;
   ozonRevenue30d: number;
+  wbProfit30d: number;
+  ozonProfit30d: number;
+  wbAdSpend30d: number;
+  ozonAdSpend30d: number;
+  wbMargin30d: number;
+  ozonMargin30d: number;
+  wbDrr30d: number;
+  ozonDrr30d: number;
   wbUnits30d: number;
   ozonUnits30d: number;
   wbStock: number;
@@ -100,6 +108,8 @@ export function ProductCatalog() {
   const [problemsOnly, setProblemsOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("revenue");
   const [descending, setDescending] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     setLoading(true);
@@ -113,6 +123,10 @@ export function ProductCatalog() {
     () => [...new Set(items.map((item) => item.category))].sort(),
     [items],
   );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, channel, category, problemsOnly, sort, descending, pageSize]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -148,8 +162,8 @@ export function ProductCatalog() {
 
     const getter = (item: CatalogItem) => {
       if (sort === "growth") return item.growth;
-      if (sort === "margin") return item.margin30d;
-      if (sort === "drr") return item.drr30d;
+      if (sort === "margin") return margin;
+      if (sort === "drr") return drr;
       if (sort === "stock") return getStock(item);
       return getRevenue(item);
     };
@@ -160,10 +174,46 @@ export function ProductCatalog() {
   }, [items, search, channel, category, problemsOnly, sort, descending]);
 
   const totals = useMemo(() => {
-    const revenue = items.reduce((sum, item) => sum + item.revenue30d, 0);
-    const profit = items.reduce((sum, item) => sum + item.profit30d, 0);
-    const units = items.reduce((sum, item) => sum + item.units30d, 0);
-    const ad = items.reduce((sum, item) => sum + item.adSpend30d, 0);
+    const revenue = items.reduce(
+      (sum, item) =>
+        sum +
+        (channel === "wb"
+          ? item.wbRevenue30d
+          : channel === "ozon"
+            ? item.ozonRevenue30d
+            : item.revenue30d),
+      0,
+    );
+    const profit = items.reduce(
+      (sum, item) =>
+        sum +
+        (channel === "wb"
+          ? item.wbProfit30d
+          : channel === "ozon"
+            ? item.ozonProfit30d
+            : item.profit30d),
+      0,
+    );
+    const units = items.reduce(
+      (sum, item) =>
+        sum +
+        (channel === "wb"
+          ? item.wbUnits30d
+          : channel === "ozon"
+            ? item.ozonUnits30d
+            : item.units30d),
+      0,
+    );
+    const ad = items.reduce(
+      (sum, item) =>
+        sum +
+        (channel === "wb"
+          ? item.wbAdSpend30d
+          : channel === "ozon"
+            ? item.ozonAdSpend30d
+            : item.adSpend30d),
+      0,
+    );
     return {
       revenue,
       profit,
@@ -172,7 +222,11 @@ export function ProductCatalog() {
       drr: revenue ? (ad / revenue) * 100 : 0,
       issues: items.filter((item) => item.severity).length,
     };
-  }, [items]);
+  }, [items, channel]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   if (selectedSku) {
     return (
@@ -329,7 +383,7 @@ export function ProductCatalog() {
               <span />
             </div>
 
-            {filtered.map((item) => {
+            {paginated.map((item) => {
               const revenue =
                 channel === "wb"
                   ? item.wbRevenue30d
@@ -354,6 +408,18 @@ export function ProductCatalog() {
                   : channel === "ozon"
                     ? item.ozonStock
                     : item.wbStock + item.ozonStock;
+              const margin =
+                channel === "wb"
+                  ? item.wbMargin30d
+                  : channel === "ozon"
+                    ? item.ozonMargin30d
+                    : margin;
+              const drr =
+                channel === "wb"
+                  ? item.wbDrr30d
+                  : channel === "ozon"
+                    ? item.ozonDrr30d
+                    : drr;
 
               return (
                 <div
@@ -399,14 +465,14 @@ export function ProductCatalog() {
                   <div className="catalog-cell">{new Intl.NumberFormat("ru-RU").format(units)}</div>
 
                   <div className="catalog-cell">
-                    <b className={item.margin30d < 15 ? "catalog-bad" : item.margin30d > 25 ? "catalog-good" : ""}>
-                      {pct(item.margin30d)}
+                    <b className={margin < 15 ? "catalog-bad" : margin > 25 ? "catalog-good" : ""}>
+                      {pct(margin)}
                     </b>
                   </div>
 
                   <div className="catalog-cell">
-                    <b className={item.drr30d > 20 ? "catalog-bad" : item.drr30d < 15 ? "catalog-good" : ""}>
-                      {pct(item.drr30d)}
+                    <b className={drr > 20 ? "catalog-bad" : drr < 15 ? "catalog-good" : ""}>
+                      {pct(drr)}
                     </b>
                   </div>
 
@@ -434,6 +500,50 @@ export function ProductCatalog() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div className="catalog-pagination">
+          <div className="catalog-page-size">
+            <span>Показывать</span>
+            <select
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value))}
+            >
+              {[25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            <span>
+              {filtered.length === 0
+                ? "0 товаров"
+                : `${(safePage - 1) * pageSize + 1}–${Math.min(
+                    safePage * pageSize,
+                    filtered.length,
+                  )} из ${filtered.length}`}
+            </span>
+          </div>
+
+          <div className="catalog-page-controls">
+            <button
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={safePage <= 1}
+            >
+              Назад
+            </button>
+            <span>
+              {safePage} / {pageCount}
+            </span>
+            <button
+              onClick={() =>
+                setPage((current) => Math.min(pageCount, current + 1))
+              }
+              disabled={safePage >= pageCount}
+            >
+              Далее
+            </button>
           </div>
         </div>
       </article>
