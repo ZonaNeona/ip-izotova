@@ -395,17 +395,16 @@ export function ControlCenter() {
             <Reviews items={reviews} sent={sentReviews} onSend={sendReview} />
           )}
           {section === "cards" && (
-            <Cards
-              generated={cardGenerated}
+            <ProductCardStudio
               onGenerate={() => {
                 setCardGenerated(true);
                 pushAudit({
                   actor: "AI Content",
                   action: "Создан черновик карточки HeatPro X500",
-                  result: "Контент готов к проверке перед публикацией",
+                  result: "Текст и медиа готовы к проверке перед публикацией",
                   tone: "info",
                 });
-                notify("Черновик карточки создан в Demo AI режиме.");
+                notify("Карточка создана и готова к проверке.");
               }}
             />
           )}
