@@ -545,7 +545,7 @@ function Overview({
               <strong>{criticalCampaigns.length}</strong>
             </div>
             <div>
-              <span>Риск stockout</span>
+              <span>Риск дефицита</span>
               <strong>4 SKU</strong>
             </div>
             <div>
@@ -580,9 +580,10 @@ function Overview({
             </div>
             {criticalCampaigns.map((item) => (
               <div className="compact-row" key={item.id}>
-                <span>
+                <span className="product-cell">
                   <strong>{item.product}</strong>
                   <small>{item.sku}</small>
+                  <MarketplaceLinks sku={item.sku} compact />
                 </span>
                 <span className="bad-metric">{item.drr}%</span>
                 <span>{rub(item.currentBid)}</span>
@@ -645,8 +646,8 @@ function Advertising({
           <span>Товар / SKU</span>
           <span>Ставка</span>
           <span>Расход</span>
-          <span>CTR</span>
-          <span>CPC</span>
+          <span>Кликабельность</span>
+          <span>Цена клика</span>
           <span>Заказы</span>
           <span>ДРР</span>
           <span>Рекомендация</span>
@@ -1010,7 +1011,7 @@ function Inventory({
           <span className="eyebrow">Расчёт поставок</span>
           <h2>Остатки и прогноз</h2>
         </div>
-        <span className="formula-note">расчёт без LLM</span>
+        <span className="formula-note">расчёт без языковой модели</span>
       </div>
 
       <div className="data-table inventory-table">
@@ -1030,6 +1031,7 @@ function Inventory({
               <span className="product-cell">
                 <strong>{item.product}</strong>
                 <small>{item.sku}</small>
+                <MarketplaceLinks sku={item.sku} compact />
               </span>
               <span>{item.wbStock} шт.</span>
               <span>{item.ownStock} шт.</span>
