@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ProductCardStudio } from "@/components/product-card-studio";
 import { IntegrationsPanel } from "@/components/integrations-panel";
+import { ProductCatalog } from "@/components/product-catalog";
 import {
   Activity,
   AlertTriangle,
@@ -49,6 +50,7 @@ import {
 
 type Section =
   | "overview"
+  | "products"
   | "advertising"
   | "reviews"
   | "cards"
@@ -65,6 +67,7 @@ const menu: Array<{
   badge?: string;
 }> = [
   { id: "overview", label: "Обзор", icon: LayoutDashboard },
+  { id: "products", label: "Товары", icon: PackageCheck, badge: "100" },
   { id: "advertising", label: "Реклама и ставки", icon: Gauge, badge: "3" },
   { id: "reviews", label: "Отзывы и вопросы", icon: MessageSquareText, badge: "3" },
   { id: "cards", label: "Карточки товаров", icon: ImagePlus },
@@ -79,6 +82,10 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
   overview: {
     title: "Центр управления",
     subtitle: "Что требует внимания прямо сейчас",
+  },
+  products: {
+    title: "Товары",
+    subtitle: "100 SKU · Wildberries + Ozon · продажи, маржа и операционные риски",
   },
   advertising: {
     title: "Реклама и ставки",
@@ -387,6 +394,7 @@ export function ControlCenter() {
               audit={audit}
             />
           )}
+          {section === "products" && <ProductCatalog />}
           {section === "advertising" && (
             <Advertising
               campaigns={filteredCampaigns}
