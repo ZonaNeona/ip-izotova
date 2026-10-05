@@ -941,6 +941,7 @@ export function Product360({
                   <div>
                     <strong>{competitor.name}</strong>
                     <span>{competitor.brand}</span>
+                    <MarketplaceLinks sku={competitor.name} compact />
                   </div>
                   <div>
                     <span>Цена</span>
