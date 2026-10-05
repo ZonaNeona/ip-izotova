@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WbSandboxLab } from "@/components/wb-sandbox-lab";
+import { TelegramReporting } from "@/components/telegram-reporting";
 import {
   CheckCircle2,
   CircleAlert,
@@ -104,9 +105,9 @@ export function IntegrationsPanel() {
       tone: "pink",
     },
     {
-      name: "Telegram",
-      subtitle: "Финальный слой: согласования, уведомления и быстрые команды",
-      status: status?.telegram ? "Подключено" : "Запланировано",
+      name: "Telegram · супергруппа",
+      subtitle: "Тематические отчёты: обзор, реклама, обратная связь, склады, экономика и критические события",
+      status: status?.telegram ? "Подключено" : "Готово к подключению",
       connected: Boolean(status?.telegram),
       icon: "TG",
       tone: "yellow",
@@ -219,6 +220,8 @@ export function IntegrationsPanel() {
           </>
         )}
       </article>
+
+      <TelegramReporting />
 
       <WbSandboxLab />
     </div>
