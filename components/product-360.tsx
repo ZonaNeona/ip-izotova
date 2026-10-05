@@ -1035,6 +1035,7 @@ export function Product360({
                       sku={data.product.sku}
                       wbId={wb?.listing.externalProductId}
                       ozonId={ozon?.listing.externalProductId}
+                      only={review.channelCode === "wb" ? "wb" : "ozon"}
                       compact
                     />
                     <button
@@ -1121,6 +1122,7 @@ export function Product360({
                 sku={data.product.sku}
                 wbId={wb?.listing.externalProductId}
                 ozonId={ozon?.listing.externalProductId}
+                only={selectedReview.channelCode === "wb" ? "wb" : "ozon"}
               />
 
               {reviewMessage && (

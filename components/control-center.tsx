@@ -6,7 +6,7 @@ import { IntegrationsPanel } from "@/components/integrations-panel";
 import { ProductCatalog } from "@/components/product-catalog";
 import { MarketplaceLinks } from "@/components/marketplace-links";
 import { AdvertisingCenter } from "@/components/advertising-center";
-import { ReviewsCenter } from "@/components/reviews-center";
+import { FeedbackCenter } from "@/components/feedback-center";
 import {
   Activity,
   AlertTriangle,
@@ -72,7 +72,7 @@ const menu: Array<{
   { id: "overview", label: "Обзор", icon: LayoutDashboard },
   { id: "products", label: "Товары", icon: PackageCheck, badge: "100" },
   { id: "advertising", label: "Реклама и ставки", icon: Gauge, badge: "3" },
-  { id: "reviews", label: "Отзывы", icon: MessageSquareText, badge: "141" },
+  { id: "reviews", label: "Отзывы и вопросы", icon: MessageSquareText, badge: "153" },
   { id: "cards", label: "Карточки товаров", icon: ImagePlus },
   { id: "inventory", label: "Остатки и поставки", icon: Boxes, badge: "4" },
   { id: "economics", label: "Юнит-экономика", icon: CircleDollarSign },
@@ -95,8 +95,8 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
     subtitle: "Детерминированные метрики, рекомендации и подтверждение действий",
   },
   reviews: {
-    title: "Отзывы",
-    subtitle: "Обработка обратной связи · Wildberries + Ozon · ИИ-черновики и контроль ответов",
+    title: "Отзывы и вопросы",
+    subtitle: "Обратная связь покупателей · отдельные очереди отзывов и вопросов · ИИ-черновики с проверкой",
   },
   cards: {
     title: "Карточки товаров",
@@ -151,7 +151,7 @@ export function ControlCenter() {
   const [createdSupplies, setCreatedSupplies] = useState<string[]>([]);
   const [cardGenerated, setCardGenerated] = useState(false);
   const [search, setSearch] = useState("");
-  const [reviewQueueCount, setReviewQueueCount] = useState(141);
+  const [feedbackQueueCount, setFeedbackQueueCount] = useState(153);
 
   const attentionCount = attentionItems.length;
 
@@ -330,9 +330,9 @@ export function ControlCenter() {
                   <Icon size={18} strokeWidth={1.9} />
                   {item.label}
                 </span>
-                {(item.id === "reviews" ? reviewQueueCount > 0 : Boolean(item.badge)) && (
+                {(item.id === "reviews" ? feedbackQueueCount > 0 : Boolean(item.badge)) && (
                   <span className="nav-badge">
-                    {item.id === "reviews" ? reviewQueueCount : item.badge}
+                    {item.id === "reviews" ? feedbackQueueCount : item.badge}
                   </span>
                 )}
               </button>
@@ -405,7 +405,7 @@ export function ControlCenter() {
           {section === "products" && <ProductCatalog />}
           {section === "advertising" && <AdvertisingCenter />}
           {section === "reviews" && (
-            <ReviewsCenter onQueueChange={setReviewQueueCount} />
+            <FeedbackCenter onQueueChange={setFeedbackQueueCount} />
           )}
           {section === "cards" && (
             <ProductCardStudio

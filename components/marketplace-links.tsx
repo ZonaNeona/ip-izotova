@@ -42,37 +42,43 @@ export function MarketplaceLinks({
   ozonId,
   compact = false,
   className = "",
+  only = "all",
 }: {
   sku: string;
   wbId?: string | number | null;
   ozonId?: string | number | null;
   compact?: boolean;
   className?: string;
+  only?: "all" | "wb" | "ozon";
 }) {
   const urls = marketplaceUrls({ sku, wbId, ozonId });
 
   return (
     <span className={`marketplace-links ${compact ? "compact" : ""} ${className}`.trim()}>
-      <a
-        href={urls.wb}
-        target="_blank"
-        rel="noreferrer noopener"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <span className="marketplace-link-mark wb">WB</span>
-        {compact ? "WB" : "Посмотреть на WB"}
-        <ExternalLink size={compact ? 11 : 12} />
-      </a>
-      <a
-        href={urls.ozon}
-        target="_blank"
-        rel="noreferrer noopener"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <span className="marketplace-link-mark ozon">OZ</span>
-        {compact ? "Ozon" : "Посмотреть на Ozon"}
-        <ExternalLink size={compact ? 11 : 12} />
-      </a>
+      {(only === "all" || only === "wb") && (
+        <a
+          href={urls.wb}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span className="marketplace-link-mark wb">WB</span>
+          {compact ? "WB" : "Посмотреть на WB"}
+          <ExternalLink size={compact ? 11 : 12} />
+        </a>
+      )}
+      {(only === "all" || only === "ozon") && (
+        <a
+          href={urls.ozon}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span className="marketplace-link-mark ozon">OZ</span>
+          {compact ? "Ozon" : "Посмотреть на Ozon"}
+          <ExternalLink size={compact ? 11 : 12} />
+        </a>
+      )}
     </span>
   );
 }

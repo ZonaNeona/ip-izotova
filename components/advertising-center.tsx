@@ -672,6 +672,7 @@ export function AdvertisingCenter() {
                             ? campaign.channel.externalProductId
                             : null
                         }
+                        only={campaign.channel.code === "wb" ? "wb" : "ozon"}
                         compact
                       />
                     </span>
@@ -766,6 +767,7 @@ export function AdvertisingCenter() {
                       ? selected.channel.externalProductId
                       : null
                   }
+                  only={selected.channel.code === "wb" ? "wb" : "ozon"}
                 />
               </div>
 

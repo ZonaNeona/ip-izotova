@@ -716,6 +716,7 @@ export function ReviewsCenter({
                           ? review.channel.externalProductId
                           : null
                       }
+                      only={review.channel.code === "wb" ? "wb" : "ozon"}
                       compact
                     />
                   </span>
@@ -871,6 +872,7 @@ export function ReviewsCenter({
                         ? selected.channel.externalProductId
                         : null
                     }
+                    only={selected.channel.code === "wb" ? "wb" : "ozon"}
                   />
                 </div>
 
