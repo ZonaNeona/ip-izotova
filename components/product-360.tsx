@@ -834,6 +834,7 @@ export function Product360({
               <span className="eyebrow">Конкуренты</span>
               <h3>Цены и позиция</h3>
             </div>
+            <span className="p360-source-chip">WB · demo market data</span>
           </div>
           <div className="competitor-list">
             {data.competitors.map((competitor) => {
@@ -879,27 +880,34 @@ export function Product360({
           </div>
           <span className="count-chip">{visibleReviews.length}</span>
         </div>
-        <div className="p360-review-grid">
-          {visibleReviews.slice(0, 6).map((review) => (
-            <article key={review.id} className="p360-review">
-              <div className="p360-review-head">
-                <strong>{review.author ?? "Покупатель"}</strong>
-                <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
-              </div>
-              <p>{review.body}</p>
-              <div>
-                <span>
-                  {review.channelCode === "wb"
-                    ? "WB"
-                    : review.channelCode === "ozon"
-                      ? "Ozon"
-                      : "Все"} · {review.classification ?? "Общий отзыв"}
-                </span>
-                <small>{new Date(review.created_at).toLocaleDateString("ru-RU")}</small>
-              </div>
-            </article>
-          ))}
-        </div>
+        {visibleReviews.length === 0 ? (
+          <div className="p360-empty p360-empty-compact">
+            <CheckCircle2 size={22} />
+            <span>Для выбранного канала отзывов пока нет.</span>
+          </div>
+        ) : (
+          <div className="p360-review-grid">
+            {visibleReviews.slice(0, 6).map((review) => (
+              <article key={review.id} className="p360-review">
+                <div className="p360-review-head">
+                  <strong>{review.author ?? "Покупатель"}</strong>
+                  <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                </div>
+                <p>{review.body}</p>
+                <div>
+                  <span>
+                    {review.channelCode === "wb"
+                      ? "WB"
+                      : review.channelCode === "ozon"
+                        ? "Ozon"
+                        : "Все"} · {review.classification ?? "Общий отзыв"}
+                  </span>
+                  <small>{new Date(review.created_at).toLocaleDateString("ru-RU")}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
