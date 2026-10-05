@@ -78,6 +78,7 @@ type Product360Data = {
   incidents: Array<{
     id: string;
     channel_id: string | null;
+    channelCode: string | null;
     incident_type: string;
     severity: string;
     title: string;
@@ -91,18 +92,21 @@ type Product360Data = {
   recommendations: Array<{
     id: string;
     channel_id: string | null;
+    channelCode: string | null;
     recommendation_type: string;
     priority: string;
     title: string;
     rationale: string;
     expected_effect: string | null;
     risk: string | null;
+    action_payload: Record<string, unknown>;
     status: string;
     created_at: string;
   }>;
   reviews: Array<{
     id: string;
     product_channel_id: string | null;
+    channelCode: string | null;
     author: string | null;
     rating: number;
     body: string;
@@ -314,6 +318,10 @@ export function Product360({
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [period, setPeriod] = useState(30);
   const [metric, setMetric] = useState<MetricKey>("revenue");
+  const [showRecommendationDetails, setShowRecommendationDetails] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -355,6 +363,85 @@ export function Product360({
   const current = useMemo(() => sumMetrics(currentPeriod), [currentPeriod]);
   const previous = useMemo(() => sumMetrics(previousPeriod), [previousPeriod]);
 
+  const selectedIncident = useMemo(() => {
+    if (!data) return undefined;
+    const open = data.incidents.filter((item) => item.status === "open");
+    if (channel === "all") return open[0];
+    return open.find((item) => item.channelCode === channel) ?? open[0];
+  }, [data, channel]);
+
+  const selectedRecommendation = useMemo(() => {
+    if (!data) return undefined;
+    const suggested = data.recommendations.filter(
+      (item) => item.status === "suggested",
+    );
+    if (channel === "all") return suggested[0];
+    return (
+      suggested.find((item) => item.channelCode === channel) ??
+      suggested[0]
+    );
+  }, [data, channel]);
+
+  const visibleReviews = useMemo(() => {
+    if (!data) return [];
+    if (channel === "all") return data.reviews;
+    return data.reviews.filter((item) => item.channelCode === channel);
+  }, [data, channel]);
+
+  useEffect(() => {
+    setShowRecommendationDetails(false);
+    setShowEvidence(false);
+    setDecisionMessage(null);
+  }, [channel, sku]);
+
+  async function decideRecommendation(action: "accepted" | "rejected") {
+    if (!selectedRecommendation || decisionBusy) return;
+
+    setDecisionBusy(true);
+    setDecisionMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/recommendations/${selectedRecommendation.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setDecisionMessage(payload.error ?? "Не удалось сохранить решение.");
+        return;
+      }
+
+      setData((currentData) =>
+        currentData
+          ? {
+              ...currentData,
+              recommendations: currentData.recommendations.map((item) =>
+                item.id === selectedRecommendation.id
+                  ? { ...item, status: action }
+                  : item,
+              ),
+            }
+          : currentData,
+      );
+      setDecisionMessage(
+        action === "accepted"
+          ? "Рекомендация принята и записана в журнал действий."
+          : "Рекомендация отклонена и записана в журнал действий.",
+      );
+      setShowRecommendationDetails(false);
+      setShowEvidence(false);
+    } catch {
+      setDecisionMessage("Не удалось сохранить решение.");
+    } finally {
+      setDecisionBusy(false);
+    }
+  }
+
   if (loading || !data) {
     return (
       <div className="p360-skeleton">
@@ -387,8 +474,8 @@ export function Product360({
     );
   }
 
-  const mainIncident = data.incidents[0];
-  const recommendation = data.recommendations[0];
+  const mainIncident = selectedIncident;
+  const recommendation = selectedRecommendation;
   const wb = data.channels.find((item) => item.code === "wb");
   const ozon = data.channels.find((item) => item.code === "ozon");
 
@@ -603,13 +690,93 @@ export function Product360({
                 <span>Риск</span>
                 <p>{recommendation.risk ?? "Требуется подтверждение менеджера."}</p>
               </div>
-              <button className="primary-button p360-ai-action">
-                Разобрать рекомендацию
+              <button
+                className="primary-button p360-ai-action"
+                onClick={() =>
+                  setShowRecommendationDetails((current) => !current)
+                }
+              >
+                {showRecommendationDetails ? "Скрыть разбор" : "Разобрать рекомендацию"}
                 <ExternalLink size={15} />
               </button>
-              <button className="secondary-button p360-evidence">
-                Показать данные-основания
+              <button
+                className="secondary-button p360-evidence"
+                onClick={() => setShowEvidence((current) => !current)}
+              >
+                {showEvidence ? "Скрыть данные-основания" : "Показать данные-основания"}
               </button>
+
+              {showRecommendationDetails && (
+                <div className="p360-recommendation-detail">
+                  <div>
+                    <span>Почему это действие</span>
+                    <p>
+                      {recommendation.rationale} Система сравнивает текущий
+                      показатель с порогом и динамикой выбранного канала.
+                    </p>
+                  </div>
+                  <div className="p360-recommendation-actions">
+                    <button
+                      className="primary-button"
+                      onClick={() => decideRecommendation("accepted")}
+                      disabled={decisionBusy}
+                    >
+                      <CheckCircle2 size={15} />
+                      Принять
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => decideRecommendation("rejected")}
+                      disabled={decisionBusy}
+                    >
+                      Отклонить
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showEvidence && (
+                <div className="p360-evidence-panel">
+                  <div className="p360-evidence-row">
+                    <span>Метрика</span>
+                    <strong>
+                      {String(recommendation.action_payload?.metric ?? "—")}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Текущее значение</span>
+                    <strong>
+                      {recommendation.action_payload?.current !== undefined
+                        ? String(recommendation.action_payload.current)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Порог</span>
+                    <strong>
+                      {recommendation.action_payload?.threshold !== undefined
+                        ? String(recommendation.action_payload.threshold)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Выручка · период</span>
+                    <strong>{compactMoney(current.revenue)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Маржа</span>
+                    <strong>{pct(current.margin)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>ДРР</span>
+                    <strong>{pct(current.drr)}</strong>
+                  </div>
+                </div>
+              )}
+
+              {decisionMessage && (
+                <div className="p360-decision-message">{decisionMessage}</div>
+              )}
             </>
           ) : (
             <div className="p360-empty">
@@ -710,10 +877,10 @@ export function Product360({
             <span className="eyebrow">Отзывы</span>
             <h3>Последняя обратная связь</h3>
           </div>
-          <span className="count-chip">{data.reviews.length}</span>
+          <span className="count-chip">{visibleReviews.length}</span>
         </div>
         <div className="p360-review-grid">
-          {data.reviews.slice(0, 6).map((review) => (
+          {visibleReviews.slice(0, 6).map((review) => (
             <article key={review.id} className="p360-review">
               <div className="p360-review-head">
                 <strong>{review.author ?? "Покупатель"}</strong>
@@ -721,7 +888,13 @@ export function Product360({
               </div>
               <p>{review.body}</p>
               <div>
-                <span>{review.classification ?? "Общий отзыв"}</span>
+                <span>
+                  {review.channelCode === "wb"
+                    ? "WB"
+                    : review.channelCode === "ozon"
+                      ? "Ozon"
+                      : "Все"} · {review.classification ?? "Общий отзыв"}
+                </span>
                 <small>{new Date(review.created_at).toLocaleDateString("ru-RU")}</small>
               </div>
             </article>
