@@ -7041,3 +7041,70 @@ select:focus-visible {
     flex: 1;
   }
 }
+
+
+/* Modal viewport hardening */
+.p360-modal-backdrop,
+.ad-modal-backdrop {
+  width: 100vw;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+
+.p360-modal,
+.ad-modal {
+  margin: auto;
+  max-height: calc(100dvh - 40px);
+  max-width: calc(100vw - 32px);
+}
+
+.p360-modal-body,
+.ad-modal-body {
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+@media (max-height: 720px) and (min-width: 681px) {
+  .p360-modal-backdrop,
+  .ad-modal-backdrop {
+    place-items: start center;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .p360-modal,
+  .ad-modal {
+    max-height: calc(100dvh - 36px);
+  }
+
+  .p360-modal-header,
+  .ad-modal-head {
+    padding-top: 16px;
+    padding-bottom: 14px;
+  }
+
+  .p360-modal-footer,
+  .ad-modal-footer {
+    padding-top: 12px;
+    padding-bottom: 14px;
+  }
+}
+
+@media (max-width: 680px) {
+  .p360-modal-backdrop,
+  .ad-modal-backdrop {
+    width: 100vw;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .p360-modal,
+  .ad-modal {
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    margin-top: auto;
+    margin-bottom: 0;
+  }
+}
