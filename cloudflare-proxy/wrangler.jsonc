@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "job-ai-router-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-05",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "secrets": {
+    "required": [
+      "GATEWAY_SECRET",
+      "OPENROUTER_API_KEY",
+      "IMAGEROUTER_API_KEY"
+    ]
+  }
+}
