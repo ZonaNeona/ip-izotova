@@ -618,10 +618,56 @@ function Reviews({
   sent: string[];
   onSend: (id: string, product: string) => void;
 }) {
+  const [answers, setAnswers] = useState<
+    Record<
+      string,
+      {
+        classification: string;
+        risk: string;
+        draft: string;
+        policy: string;
+        mode: "live" | "demo";
+      }
+    >
+  >({});
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  async function refreshAnswer(review: (typeof reviewsSeed)[number]) {
+    setLoadingId(review.id);
+    try {
+      const response = await fetch("/api/ai/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product: review.product,
+          author: review.author,
+          rating: review.rating,
+          text: review.text,
+        }),
+      });
+      const payload = await response.json();
+      if (response.ok && payload.data) {
+        setAnswers((current) => ({
+          ...current,
+          [review.id]: { ...payload.data, mode: payload.mode },
+        }));
+      }
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   return (
     <div className="review-grid">
       {reviewsSeed.map((review) => {
         const isSent = sent.includes(review.id);
+        const answer = answers[review.id] ?? {
+          classification: review.classification,
+          risk: review.risk,
+          draft: review.draft,
+          policy: review.policy,
+          mode: "demo" as const,
+        };
         return (
           <article className="card review-card" key={review.id}>
             <div className="review-top">
@@ -637,7 +683,7 @@ function Reviews({
                 <small>{review.author}</small>
               </div>
               <span className={review.rating <= 3 ? "risk-chip medium" : "risk-chip low"}>
-                {review.risk} риск
+                {answer.risk} риск
               </span>
             </div>
 
@@ -645,15 +691,26 @@ function Reviews({
 
             <div className="classification">
               <Tag size={15} />
-              {review.classification}
+              {answer.classification}
             </div>
 
             <div className="draft">
               <div className="draft-head">
-                <span><WandSparkles size={15} /> AI-черновик</span>
-                <span className="policy">{review.policy}</span>
+                <span>
+                  <WandSparkles size={15} />
+                  AI-черновик · {answer.mode === "live" ? "LIVE" : "DEMO"}
+                </span>
+                <button
+                  className="text-button"
+                  disabled={loadingId === review.id}
+                  onClick={() => refreshAnswer(review)}
+                >
+                  <RefreshCw size={13} />
+                  {loadingId === review.id ? "Генерация..." : "Обновить AI"}
+                </button>
               </div>
-              <p>{review.draft}</p>
+              <p>{answer.draft}</p>
+              <div className="policy-line">{answer.policy}</div>
             </div>
 
             <div className="review-actions">
@@ -681,6 +738,41 @@ function Cards({
   generated: boolean;
   onGenerate: () => void;
 }) {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<{
+    title: string;
+    description: string;
+    bullets: string[];
+    category: string;
+    searchPhrases: string[];
+    mode: "live" | "demo";
+  } | null>(null);
+
+  async function generateCard() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/ai/product-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: "Электрический чайник HeatPro X500",
+          brand: "HeatPro",
+          volume: "1,7 л",
+          power: "2200 Вт",
+          features:
+            "Нержавеющая сталь, автоотключение, защита от включения без воды, поворотная база 360°",
+        }),
+      });
+      const payload = await response.json();
+      if (response.ok && payload.data) {
+        setPreview({ ...payload.data, mode: payload.mode });
+        onGenerate();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="cards-workspace">
       <article className="card form-card">
@@ -724,9 +816,13 @@ function Cards({
           <button className="secondary-button">Выбрать файлы</button>
         </div>
 
-        <button className="primary-button generate-button" onClick={onGenerate}>
-          <Sparkles size={17} />
-          Сгенерировать карточку
+        <button
+          className="primary-button generate-button"
+          onClick={generateCard}
+          disabled={loading}
+        >
+          {loading ? <RefreshCw size={17} /> : <Sparkles size={17} />}
+          {loading ? "Генерация..." : "Сгенерировать карточку"}
         </button>
       </article>
 
@@ -744,7 +840,9 @@ function Cards({
           <>
             <div className="card-header">
               <div>
-                <span className="eyebrow">Черновик готов</span>
+                <span className="eyebrow">
+                  Черновик готов · {preview?.mode === "live" ? "LIVE AI" : "DEMO AI"}
+                </span>
                 <h2>HeatPro X500</h2>
               </div>
               <span className="success-chip"><CheckCircle2 size={14} /> Проверено</span>
@@ -755,18 +853,26 @@ function Cards({
                 <span>IMAGE PREVIEW</span>
               </div>
               <div>
-                <span className="category-line">Бытовая техника · Чайники</span>
-                <h3>Электрический чайник HeatPro X500, 1,7 л, 2200 Вт</h3>
+                <span className="category-line">
+                  {preview?.category ?? "Бытовая техника · Электрические чайники"}
+                </span>
+                <h3>
+                  {preview?.title ??
+                    "Электрический чайник HeatPro X500, 1,7 л, 2200 Вт"}
+                </h3>
                 <p>
-                  Быстрое кипячение, корпус из нержавеющей стали и автоматическая
-                  защита при отсутствии воды. Подходит для ежедневного
-                  использования дома и в офисе.
+                  {preview?.description ??
+                    "Практичный электрический чайник для ежедневного использования дома и в офисе."}
                 </p>
                 <ul>
-                  <li>Объём: 1,7 л</li>
-                  <li>Мощность: 2200 Вт</li>
-                  <li>Автоматическое отключение</li>
-                  <li>Поворотная база 360°</li>
+                  {(preview?.bullets ?? [
+                    "Объём: 1,7 л",
+                    "Мощность: 2200 Вт",
+                    "Автоматическое отключение",
+                    "Поворотная база 360°",
+                  ]).map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
                 </ul>
               </div>
             </div>
