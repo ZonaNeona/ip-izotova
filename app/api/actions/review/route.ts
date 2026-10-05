@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   };
 
   if (!body.reviewId) {
-    return NextResponse.json({ error: "reviewId is required" }, { status: 400 });
+    return NextResponse.json({ error: "Не указан идентификатор отзыва." }, { status: 400 });
   }
 
   if (!isSupabaseConfigured()) {
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   });
 
   if (!updated?.length) {
-    return NextResponse.json({ error: "Failed to update review" }, { status: 500 });
+    return NextResponse.json({ error: "Не удалось сохранить ответ на отзыв." }, { status: 500 });
   }
 
   await supabaseInsert("audit_log", {
