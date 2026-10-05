@@ -458,25 +458,65 @@ export async function POST(request: Request) {
     confidence: "Низкая",
   };
 
-  const identity = await openRouterJson<IdentityResult>({
-    schemaName: "product_web_identity",
-    schema: identitySchema,
-    fallback: identityFallback,
-    webSearch: true,
-    webFetch: true,
+  let identity;
+  try {
+    identity = await openRouterJson<IdentityResult>({
+      schemaName: "product_web_identity",
+      schema: identitySchema,
+      fallback: identityFallback,
+      webSearch: true,
+      webFetch: false,
+      strict: true,
     system:
       "Ты товарный исследователь для seller-команды Wildberries. Найди ТОЧНО тот товар/модель, которую указал пользователь. " +
       "Если дана ссылка, сначала используй её как приоритетный источник и проверь модель. Затем при необходимости ищи официальный сайт производителя и крупные надёжные магазины. " +
       "Нужно определить точное название, бренд, модель, товарную категорию, подходящий русский поисковый термин для предмета Wildberries, одну основную исходную фотографию товара и характеристики. " +
       "primaryImageUrl должен быть URL максимально чистого фото конкретной модели без водяного знака; предпочитай официальный сайт производителя, CDN производителя или крупный магазин. " +
       "Если не уверен, не подменяй товар похожей моделью. observedSpecs включай только с явным источником. URLs должны быть реальными URL, полученными из поиска/страниц, а не придуманными.",
-    user: JSON.stringify({
-      query,
-      preferredUrl: providedUrl || null,
-      task:
-        "Найди точную модель, исходное фото, категорию и проверяемые характеристики для создания карточки Wildberries.",
-    }),
-  });
+      user: JSON.stringify({
+        query,
+        preferredUrl: providedUrl || null,
+        task:
+          "Обязательно выполни веб-поиск. Найди точную модель, минимум 2 реальных источника, исходное фото/страницу с фото, категорию и проверяемые характеристики для создания карточки Wildberries.",
+      }),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          "Веб-поиск OpenRouter не выполнился. Пустой товар не создан.",
+        details:
+          error instanceof Error ? error.message.slice(0, 700) : "Unknown error",
+      },
+      { status: 502 },
+    );
+  }
+
+  const hasEvidence =
+    identity.data.sources.some((item) => Boolean(safeUrl(item.url))) ||
+    identity.data.observedSpecs.some(
+      (item) => Boolean(item.value?.trim()) && Boolean(safeUrl(item.sourceUrl)),
+    );
+
+  if (
+    !hasEvidence ||
+    !identity.data.resolvedName.trim() ||
+    identity.data.confidence === "Низкая"
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Поиск не смог надёжно идентифицировать точную модель. Попробуйте уточнить название или добавьте ссылку на товар.",
+        search: {
+          resolvedName: identity.data.resolvedName,
+          confidence: identity.data.confidence,
+          sources: identity.data.sources.length,
+          specs: identity.data.observedSpecs.length,
+        },
+      },
+      { status: 422 },
+    );
+  }
 
   const { subject, characteristics } = await findWbSchema(identity.data);
 

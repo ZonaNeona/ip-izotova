@@ -13,6 +13,7 @@ type OpenRouterJsonOptions<T> = {
   fallback: T;
   webSearch?: boolean;
   webFetch?: boolean;
+  strict?: boolean;
 };
 
 export async function openRouterJson<T>({
@@ -23,10 +24,14 @@ export async function openRouterJson<T>({
   fallback,
   webSearch = false,
   webFetch = false,
+  strict = false,
 }: OpenRouterJsonOptions<T>): Promise<OpenRouterResult<T>> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
+    if (strict) {
+      throw new Error("OPENROUTER_API_KEY is not configured");
+    }
     return { data: fallback, mode: "demo" };
   }
 
@@ -53,27 +58,28 @@ export async function openRouterJson<T>({
         provider: {
           require_parameters: true,
         },
-        ...((webSearch || webFetch)
+        ...(webSearch
+          ? {
+              plugins: [
+                {
+                  id: "web",
+                  max_results: 8,
+                  search_prompt:
+                    "Search the public web thoroughly for the exact product/model in the user request. Prefer the official manufacturer, then major trustworthy retailers. Return evidence for exact model identity, specifications and the best source page containing a clean product image.",
+                },
+              ],
+            }
+          : {}),
+        ...(!webSearch && webFetch
           ? {
               tools: [
-                ...(webSearch
-                  ? [
-                      {
-                        type: "openrouter:web_search",
-                        parameters: {
-                          engine: "auto",
-                          max_results: 6,
-                        },
-                      },
-                    ]
-                  : []),
-                ...(webFetch
-                  ? [
-                      {
-                        type: "openrouter:web_fetch",
-                      },
-                    ]
-                  : []),
+                {
+                  type: "openrouter:web_fetch",
+                  parameters: {
+                    engine: "openrouter",
+                    max_content_tokens: 30000,
+                  },
+                },
               ],
             }
           : {}),
@@ -90,7 +96,13 @@ export async function openRouterJson<T>({
     });
 
     if (!response.ok) {
-      console.error("OpenRouter error", response.status, await response.text());
+      const details = await response.text();
+      console.error("OpenRouter error", response.status, details);
+      if (strict) {
+        throw new Error(
+          `OpenRouter request failed (${response.status}): ${details.slice(0, 600)}`,
+        );
+      }
       return { data: fallback, mode: "demo" };
     }
 
@@ -104,6 +116,9 @@ export async function openRouterJson<T>({
 
     const content = payload.choices?.[0]?.message?.content;
     if (!content) {
+      if (strict) {
+        throw new Error("OpenRouter returned an empty response");
+      }
       return { data: fallback, mode: "demo" };
     }
 
@@ -113,6 +128,7 @@ export async function openRouterJson<T>({
     };
   } catch (error) {
     console.error("OpenRouter request failed", error);
+    if (strict) throw error;
     return { data: fallback, mode: "demo" };
   }
 }
