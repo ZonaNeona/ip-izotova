@@ -103,6 +103,8 @@ type ReviewRow = {
   policy: string | null;
   status: string;
   created_at: string;
+  answered_at: string | null;
+  answer_text: string | null;
 };
 
 type CompetitorRow = {
