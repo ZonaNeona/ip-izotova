@@ -18,6 +18,7 @@ import {
   Star,
   Target,
   TrendingUp,
+  X,
 } from "lucide-react";
 
 type Metric = {
@@ -386,8 +387,7 @@ export function Product360({
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [period, setPeriod] = useState(30);
   const [metric, setMetric] = useState<MetricKey>("revenue");
-  const [showRecommendationDetails, setShowRecommendationDetails] = useState(false);
-  const [showEvidence, setShowEvidence] = useState(false);
+  const [recommendationModal, setRecommendationModal] = useState<"details" | "evidence" | null>(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
 
@@ -454,10 +454,29 @@ export function Product360({
   }, [data, channel]);
 
   useEffect(() => {
-    setShowRecommendationDetails(false);
-    setShowEvidence(false);
+    setRecommendationModal(null);
     setDecisionMessage(null);
   }, [channel, sku]);
+
+  useEffect(() => {
+    if (!recommendationModal) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setRecommendationModal(null);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [recommendationModal]);
 
   async function decideRecommendation(action: "accepted" | "rejected") {
     if (!selectedRecommendation || decisionBusy) return;
@@ -498,8 +517,7 @@ export function Product360({
           ? "Рекомендация принята и записана в журнал действий."
           : "Рекомендация отклонена и записана в журнал действий.",
       );
-      setShowRecommendationDetails(false);
-      setShowEvidence(false);
+      setRecommendationModal(null);
     } catch {
       setDecisionMessage("Не удалось сохранить решение.");
     } finally {
@@ -757,87 +775,17 @@ export function Product360({
               </div>
               <button
                 className="primary-button p360-ai-action"
-                onClick={() =>
-                  setShowRecommendationDetails((current) => !current)
-                }
+                onClick={() => setRecommendationModal("details")}
               >
-                {showRecommendationDetails ? "Скрыть разбор" : "Разобрать рекомендацию"}
+                Разобрать рекомендацию
                 <ExternalLink size={15} />
               </button>
               <button
                 className="secondary-button p360-evidence"
-                onClick={() => setShowEvidence((current) => !current)}
+                onClick={() => setRecommendationModal("evidence")}
               >
-                {showEvidence ? "Скрыть данные-основания" : "Показать данные-основания"}
+                Показать данные-основания
               </button>
-
-              {showRecommendationDetails && (
-                <div className="p360-recommendation-detail">
-                  <div>
-                    <span>Почему это действие</span>
-                    <p>
-                      {recommendation.rationale} Система сравнивает текущий
-                      показатель с порогом и динамикой выбранного канала.
-                    </p>
-                  </div>
-                  <div className="p360-recommendation-actions">
-                    <button
-                      className="primary-button"
-                      onClick={() => decideRecommendation("accepted")}
-                      disabled={decisionBusy}
-                    >
-                      <CheckCircle2 size={15} />
-                      Принять
-                    </button>
-                    <button
-                      className="secondary-button"
-                      onClick={() => decideRecommendation("rejected")}
-                      disabled={decisionBusy}
-                    >
-                      Отклонить
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {showEvidence && (
-                <div className="p360-evidence-panel">
-                  <div className="p360-evidence-row">
-                    <span>Метрика</span>
-                    <strong>
-                      {String(recommendation.action_payload?.metric ?? "—")}
-                    </strong>
-                  </div>
-                  <div className="p360-evidence-row">
-                    <span>Текущее значение</span>
-                    <strong>
-                      {recommendation.action_payload?.current !== undefined
-                        ? String(recommendation.action_payload.current)
-                        : "—"}
-                    </strong>
-                  </div>
-                  <div className="p360-evidence-row">
-                    <span>Порог</span>
-                    <strong>
-                      {recommendation.action_payload?.threshold !== undefined
-                        ? String(recommendation.action_payload.threshold)
-                        : "—"}
-                    </strong>
-                  </div>
-                  <div className="p360-evidence-row">
-                    <span>Выручка · период</span>
-                    <strong>{compactMoney(current.revenue)}</strong>
-                  </div>
-                  <div className="p360-evidence-row">
-                    <span>Маржа</span>
-                    <strong>{pct(current.margin)}</strong>
-                  </div>
-                  <div className="p360-evidence-row">
-                    <span>ДРР</span>
-                    <strong>{pct(current.drr)}</strong>
-                  </div>
-                </div>
-              )}
 
 
             </>
@@ -980,6 +928,164 @@ export function Product360({
           </div>
         )}
       </section>
+
+      {recommendationModal && recommendation && (
+        <div
+          className="p360-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setRecommendationModal(null);
+            }
+          }}
+        >
+          <section
+            className="p360-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="p360-recommendation-modal-title"
+          >
+            <div className="p360-modal-header">
+              <div>
+                <span className="eyebrow">
+                  <Bot size={14} /> AI-рекомендация
+                </span>
+                <h3 id="p360-recommendation-modal-title">
+                  {recommendation.title}
+                </h3>
+                <p>
+                  {channel === "all"
+                    ? "Все каналы"
+                    : channel === "wb"
+                      ? "Wildberries"
+                      : "Ozon"} · {period === 365 ? "1 год" : `${period} дней`}
+                </p>
+              </div>
+              <button
+                className="p360-modal-close"
+                onClick={() => setRecommendationModal(null)}
+                aria-label="Закрыть"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <div className="p360-modal-tabs">
+              <button
+                className={recommendationModal === "details" ? "active" : ""}
+                onClick={() => setRecommendationModal("details")}
+              >
+                Разбор
+              </button>
+              <button
+                className={recommendationModal === "evidence" ? "active" : ""}
+                onClick={() => setRecommendationModal("evidence")}
+              >
+                Основания
+              </button>
+            </div>
+
+            <div className="p360-modal-body">
+              {recommendationModal === "details" ? (
+                <div className="p360-modal-details">
+                  <div className="p360-modal-section">
+                    <span>Почему это действие</span>
+                    <p>
+                      {recommendation.rationale} Система сравнивает текущее
+                      значение с порогом, динамикой и экономикой выбранного
+                      канала.
+                    </p>
+                  </div>
+
+                  <div className="p360-modal-grid">
+                    <div>
+                      <span>Ожидаемый эффект</span>
+                      <strong>{recommendation.expected_effect ?? "—"}</strong>
+                    </div>
+                    <div>
+                      <span>Риск</span>
+                      <strong>
+                        {recommendation.risk ??
+                          "Требуется подтверждение менеджера."}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p360-evidence-panel modal">
+                  <div className="p360-evidence-row">
+                    <span>Метрика</span>
+                    <strong>
+                      {String(recommendation.action_payload?.metric ?? "—")}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Текущее значение</span>
+                    <strong>
+                      {recommendation.action_payload?.current !== undefined
+                        ? String(recommendation.action_payload.current)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Порог</span>
+                    <strong>
+                      {recommendation.action_payload?.threshold !== undefined
+                        ? String(recommendation.action_payload.threshold)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Выручка · период</span>
+                    <strong>{compactMoney(current.revenue)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Прибыль</span>
+                    <strong>{compactMoney(current.profit)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Маржа</span>
+                    <strong>{pct(current.margin)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>ДРР</span>
+                    <strong>{pct(current.drr)}</strong>
+                  </div>
+                  <div className="p360-evidence-row">
+                    <span>Продано</span>
+                    <strong>
+                      {new Intl.NumberFormat("ru-RU").format(current.units)}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p360-modal-footer">
+              <div className="p360-modal-decision-note">
+                Решение будет сохранено в Supabase и журнале действий.
+              </div>
+              <div className="p360-modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => decideRecommendation("rejected")}
+                  disabled={decisionBusy}
+                >
+                  Отклонить
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() => decideRecommendation("accepted")}
+                  disabled={decisionBusy}
+                >
+                  <CheckCircle2 size={15} />
+                  {decisionBusy ? "Сохраняем..." : "Принять рекомендацию"}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
