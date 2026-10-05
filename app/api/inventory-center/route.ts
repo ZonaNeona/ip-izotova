@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseSelect } from "@/lib/supabase-rest";
+import { mediaProxyUrl } from "@/lib/media-url";
 
 type Warehouse = {
   id: string;
@@ -85,8 +86,7 @@ type Reconciliation = {
 };
 
 function publicImage(path: string | null) {
-  if (!path || !process.env.SUPABASE_URL) return null;
-  return `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(path)}`;
+  return path ? mediaProxyUrl("product-thumbnails", path) : null;
 }
 
 export async function GET() {
