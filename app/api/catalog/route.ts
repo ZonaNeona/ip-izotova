@@ -32,6 +32,7 @@ type CatalogRow = {
   severity: string | null;
   incident_type: string | null;
   incident_title: string | null;
+  thumbnail_path: string | null;
 };
 
 export async function GET() {
@@ -78,6 +79,9 @@ export async function GET() {
       severity: row.severity,
       incidentType: row.incident_type,
       incidentTitle: row.incident_title,
+      thumbnailUrl: row.thumbnail_path
+        ? `${process.env.SUPABASE_URL}/storage/v1/object/public/product-thumbnails/${encodeURIComponent(row.thumbnail_path)}`
+        : null,
     })),
   });
 }
