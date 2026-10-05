@@ -249,12 +249,21 @@ export async function GET(
     }),
     incidents: (incidents ?? []).map((item) => ({
       ...item,
+      channelCode: item.channel_id
+        ? channelDefById.get(item.channel_id)?.code ?? null
+        : null,
       metric_value:
         item.metric_value === null ? null : Number(item.metric_value),
       threshold_value:
         item.threshold_value === null ? null : Number(item.threshold_value),
     })),
-    recommendations: recommendations ?? [],
+    recommendations: (recommendations ?? []).map((item) => ({
+      ...item,
+      channelCode: item.channel_id
+        ? channelDefById.get(item.channel_id)?.code ?? null
+        : null,
+      action_payload: item.action_payload ?? {},
+    })),
     reviews: reviews ?? [],
     competitors: competitorGroups.map(({ competitor, metrics }) => ({
       id: competitor.id,
