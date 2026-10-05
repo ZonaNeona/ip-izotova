@@ -87,6 +87,8 @@ type RecommendationRow = {
   action_payload: Record<string, unknown>;
   status: string;
   created_at: string;
+  answered_at: string | null;
+  answer_text: string | null;
 };
 
 type ReviewRow = {
