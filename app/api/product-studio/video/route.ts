@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseInsert, supabaseSelect } from "@/lib/supabase-rest";
 import { persistRemoteAsset } from "@/lib/supabase-storage";
+import { clientMediaUrl } from "@/lib/media-url";
 
 type MediaRow = {
   id: string;
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
       ok: true,
       mode: "demo",
       video: null,
-      sourceImage: media.public_url,
+      sourceImage: clientMediaUrl(media.public_url),
       warning:
         "Модель видео не настроена. Исходное изображение готово к генерации после подключения модели.",
     });
@@ -209,8 +210,8 @@ export async function POST(request: Request) {
       ok: true,
       mode: "live",
       mediaId: inserted?.[0]?.id ?? null,
-      video: persisted.publicUrl,
-      sourceImage: media.public_url,
+      video: clientMediaUrl(persisted.publicUrl),
+      sourceImage: clientMediaUrl(media.public_url),
       format,
       cost: payload.cost ?? null,
       latency: payload.latency ?? null,
