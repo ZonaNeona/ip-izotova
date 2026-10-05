@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabasePatch, supabaseSelect } from "@/lib/supabase-rest";
+import { clientMediaUrl } from "@/lib/media-url";
 
 type DraftRow = {
   id: string;
@@ -62,7 +63,16 @@ export async function GET(request: Request) {
       order: "created_at.asc",
     })) ?? [];
 
-  return NextResponse.json({ draft, media });
+  return NextResponse.json({
+    draft: {
+      ...draft,
+      source_image_url: clientMediaUrl(draft.source_image_url),
+    },
+    media: media.map((item) => ({
+      ...item,
+      public_url: clientMediaUrl(item.public_url),
+    })),
+  });
 }
 
 export async function PATCH(request: Request) {
