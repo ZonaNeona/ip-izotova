@@ -44,6 +44,7 @@ type CatalogItem = {
   severity: string | null;
   incidentType: string | null;
   incidentTitle: string | null;
+  thumbnailUrl: string | null;
 };
 
 type Channel = "all" | "wb" | "ozon";
@@ -62,7 +63,23 @@ function pct(value: number) {
   }).format(value) + "%";
 }
 
-function ProductMark({ category }: { category: string }) {
+function ProductMark({
+  category,
+  thumbnailUrl,
+  name,
+}: {
+  category: string;
+  thumbnailUrl: string | null;
+  name: string;
+}) {
+  if (thumbnailUrl) {
+    return (
+      <div className="catalog-product-mark has-image">
+        <img src={thumbnailUrl} alt={name} />
+      </div>
+    );
+  }
+
   const letters = category
     .split(" ")
     .slice(0, 2)
@@ -324,7 +341,11 @@ export function ProductCatalog() {
                   onClick={() => setSelectedSku(item.sku)}
                 >
                   <span className="catalog-product-cell">
-                    <ProductMark category={item.category} />
+                    <ProductMark
+                      category={item.category}
+                      thumbnailUrl={item.thumbnailUrl}
+                      name={item.name}
+                    />
                     <span>
                       <strong>{item.name}</strong>
                       <small>{item.sku} · {item.category}</small>
