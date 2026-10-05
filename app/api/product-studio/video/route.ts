@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { supabaseInsert, supabaseSelect } from "@/lib/supabase-rest";
 import { persistRemoteAsset } from "@/lib/supabase-storage";
 import { clientMediaUrl } from "@/lib/media-url";
+import {
+  aiProviderHeaders,
+  aiProviderUrl,
+  isAiProviderConfigured,
+} from "@/lib/ai-provider";
 
 type MediaRow = {
   id: string;
@@ -97,7 +102,7 @@ export async function POST(request: Request) {
 
   const format = body.format ?? "vertical";
   const model = process.env.IMAGEROUTER_VIDEO_MODEL;
-  const apiKey = process.env.IMAGEROUTER_API_KEY;
+  const configured = isAiProviderConfigured("imagerouter");
   const facts = Object.entries(product.specs ?? {})
     .slice(0, 10)
     .map(([key, value]) => `${key}: ${String(value)}`)
@@ -113,7 +118,7 @@ export async function POST(request: Request) {
     "Duration about five seconds. Natural commercial sound is optional; no music and no narration.",
   ].join(" ");
 
-  if (!apiKey || !model) {
+  if (!configured || !model) {
     return NextResponse.json({
       ok: true,
       mode: "demo",
@@ -126,13 +131,12 @@ export async function POST(request: Request) {
 
   try {
     const response = await fetch(
-      "https://api.imagerouter.io/v1/openai/videos/generations",
+      aiProviderUrl("imagerouter", "openai/videos/generations"),
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
+        headers: aiProviderHeaders("imagerouter", {
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           prompt,
           model,

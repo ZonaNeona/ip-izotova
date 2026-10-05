@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  aiProviderHeaders,
+  aiProviderUrl,
+  isAiProviderConfigured,
+} from "@/lib/ai-provider";
 
 type ImageRequest = {
   prompt?: string;
@@ -16,7 +21,7 @@ type ImageRouterResponse = {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as ImageRequest;
-  const apiKey = process.env.IMAGEROUTER_API_KEY;
+  const configured = isAiProviderConfigured("imagerouter");
 
   if (!body.prompt) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
@@ -29,7 +34,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!apiKey) {
+  if (!configured) {
     return NextResponse.json({
       mode: "demo",
       image: body.image ?? null,
@@ -41,13 +46,12 @@ export async function POST(request: Request) {
 
   try {
     const response = await fetch(
-      "https://api.imagerouter.io/v1/openai/images/generations",
+      aiProviderUrl("imagerouter", "openai/images/generations"),
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
+        headers: aiProviderHeaders("imagerouter", {
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           prompt: body.prompt,
           model,

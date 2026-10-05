@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase-rest";
+import { isAiProviderConfigured } from "@/lib/ai-provider";
 
 export async function GET() {
   return NextResponse.json({
     supabase: isSupabaseConfigured(),
-    openrouter: Boolean(process.env.OPENROUTER_API_KEY),
-    imagerouter: Boolean(process.env.IMAGEROUTER_API_KEY),
+    openrouter: isAiProviderConfigured("openrouter"),
+    imagerouter: isAiProviderConfigured("imagerouter"),
     telegram: Boolean(
       process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID,
     ),

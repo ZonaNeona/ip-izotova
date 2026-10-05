@@ -1,3 +1,5 @@
+import { aiProviderConfig, aiProviderHeaders, aiProviderUrl } from "@/lib/ai-provider";
+
 type JsonSchema = Record<string, unknown>;
 
 type OpenRouterResult<T> = {
@@ -26,29 +28,26 @@ export async function openRouterJson<T>({
   webFetch = false,
   strict = false,
 }: OpenRouterJsonOptions<T>): Promise<OpenRouterResult<T>> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const provider = aiProviderConfig("openrouter");
 
-  if (!apiKey) {
+  if (!provider.configured) {
     if (strict) {
-      throw new Error("OPENROUTER_API_KEY is not configured");
+      throw new Error("OpenRouter is not configured");
     }
     return { data: fallback, mode: "demo" };
   }
 
-  const baseUrl =
-    process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
   const model = process.env.OPENROUTER_MODEL ?? "openrouter/auto";
 
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetch(aiProviderUrl("openrouter", "chat/completions"), {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+      headers: aiProviderHeaders("openrouter", {
         "Content-Type": "application/json",
         "HTTP-Referer":
           process.env.APP_PUBLIC_URL ?? "http://localhost:3000",
         "X-Title": "WB AI Control Center",
-      },
+      }),
       body: JSON.stringify({
         model,
         messages: [

@@ -6,6 +6,11 @@ import {
   uploadBytesToPublicBucket,
 } from "@/lib/supabase-storage";
 import { clientMediaUrl } from "@/lib/media-url";
+import {
+  aiProviderHeaders,
+  aiProviderUrl,
+  isAiProviderConfigured,
+} from "@/lib/ai-provider";
 
 type MediaKind = "main" | "secondary" | "technical";
 
@@ -232,12 +237,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Товар не найден." }, { status: 404 });
   }
 
-  const apiKey = process.env.IMAGEROUTER_API_KEY;
+  const configured = isAiProviderConfigured("imagerouter");
   const model = "google/nano-banana-2";
   const config = roleConfig[body.kind];
   const prompt = promptFor(body.kind, product, draft);
 
-  if (!apiKey) {
+  if (!configured) {
     return NextResponse.json(
       {
         error: "ImageRouter не подключён.",
@@ -249,13 +254,12 @@ export async function POST(request: Request) {
 
   try {
     const response = await fetch(
-      "https://api.imagerouter.io/v1/openai/images/generations",
+      aiProviderUrl("imagerouter", "openai/images/generations"),
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
+        headers: aiProviderHeaders("imagerouter", {
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           prompt,
           model,
