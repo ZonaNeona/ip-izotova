@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";\nimport { ProductCardStudio } from "@/components/product-card-studio";
 import {
   Activity,
   AlertTriangle,
