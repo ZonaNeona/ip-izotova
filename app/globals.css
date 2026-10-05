@@ -5713,3 +5713,57 @@ select:focus-visible {
   border-radius: 13px;
   background: #fbf9fc;
 }
+
+
+.p360-chart-stage {
+  position: relative;
+}
+
+.p360-chart {
+  cursor: crosshair;
+}
+
+.p360-hover-line {
+  stroke: rgba(119, 69, 126, .34);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.p360-hover-dot {
+  fill: #cb11ab;
+  stroke: #fff;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 3px 7px rgba(115, 25, 116, .22));
+}
+
+.p360-chart-tooltip {
+  position: absolute;
+  z-index: 4;
+  min-width: 118px;
+  padding: 9px 10px;
+  border: 1px solid #e4dce7;
+  border-radius: 11px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 12px 30px rgba(49,30,55,.12);
+  backdrop-filter: blur(10px);
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+}
+
+.p360-chart-tooltip span,
+.p360-chart-tooltip strong {
+  display: block;
+}
+
+.p360-chart-tooltip span {
+  color: #817785;
+  font-size: 10px;
+}
+
+.p360-chart-tooltip strong {
+  margin-top: 4px;
+  color: #2e2732;
+  font-size: 12px;
+}
