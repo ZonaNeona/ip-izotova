@@ -1515,3 +1515,125 @@ button:disabled {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+
+.upload-label {
+  cursor: pointer;
+}
+
+.hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-error {
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  color: #b5273d;
+  background: var(--soft-red);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.source-image-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border: 1px solid #eee6f0;
+  border-radius: 11px;
+  background: #fcfafc;
+}
+
+.source-thumb {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #f0edf2;
+}
+
+.source-thumb img,
+.generated-product-image img {
+  object-fit: contain;
+}
+
+.source-image-row strong,
+.source-image-row span {
+  display: block;
+}
+
+.source-image-row strong {
+  font-size: 9px;
+}
+
+.source-image-row span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.generated-product-image {
+  position: relative;
+  min-height: 235px;
+  overflow: hidden;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 28%, #fff, transparent 24%),
+    linear-gradient(145deg, #f4dff3, #eee6f8);
+}
+
+.image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #a05aa6;
+}
+
+.image-placeholder span {
+  font-size: 8px;
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+
+.image-mode-badge {
+  position: absolute;
+  left: 9px;
+  bottom: 9px;
+  z-index: 2;
+  padding: 5px 7px;
+  border-radius: 7px;
+  color: white;
+  background: rgba(31, 20, 36, .78);
+  backdrop-filter: blur(8px);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.generation-meta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.generation-meta span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f7f3f8;
+  color: #75697a;
+  font-size: 8px;
+  font-weight: 700;
+}
