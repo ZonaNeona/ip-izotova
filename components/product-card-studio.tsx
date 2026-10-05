@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { MarketplaceLinks } from "@/components/marketplace-links";
 import { useState } from "react";
 import {
   CheckCircle2,
@@ -142,7 +143,7 @@ export function ProductCardStudio({
             <span className="eyebrow">Новая карточка</span>
             <h2>Исходные данные товара</h2>
           </div>
-          <span className="demo-chip">AI + validation</span>
+          <span className="demo-chip">ИИ + проверка</span>
         </div>
 
         <div className="form-grid">
@@ -217,7 +218,7 @@ export function ProductCardStudio({
               />
             </div>
             <div>
-              <strong>Источник для image-to-image</strong>
+              <strong>Источник для генерации по исходному изображению</strong>
               <span>
                 Геометрия и внешний вид товара должны остаться неизменными.
               </span>
@@ -239,7 +240,7 @@ export function ProductCardStudio({
         {!preview && !imagePreview ? (
           <div className="empty-preview">
             <WandSparkles size={34} />
-            <strong>Здесь появится готовый AI-черновик</strong>
+            <strong>Здесь появится готовый ИИ-черновик</strong>
             <span>
               OpenRouter готовит структуру карточки, ImageRouter — товарное
               изображение. Финальная публикация всегда требует проверки.
@@ -250,9 +251,10 @@ export function ProductCardStudio({
             <div className="card-header">
               <div>
                 <span className="eyebrow">
-                  Черновик · {preview?.mode === "live" ? "OPENROUTER LIVE" : "TEXT DEMO"}
+                  Черновик · {preview?.mode === "live" ? "OpenRouter подключён" : "Демо-текст"}
                 </span>
                 <h2>{brand} · карточка товара</h2>
+                <MarketplaceLinks sku="HP-X500-BLK" compact />
               </div>
               <span className="success-chip">
                 <CheckCircle2 size={14} /> Проверено
@@ -264,7 +266,7 @@ export function ProductCardStudio({
                 {imageToShow ? (
                   <Image
                     src={imageToShow}
-                    alt="AI изображение товара"
+                    alt="ИИ-изображение товара"
                     fill
                     unoptimized
                     sizes="220px"
@@ -272,15 +274,15 @@ export function ProductCardStudio({
                 ) : (
                   <div className="image-placeholder">
                     <ImagePlus size={42} />
-                    <span>IMAGE DEMO</span>
+                    <span>ДЕМО-ИЗОБРАЖЕНИЕ</span>
                   </div>
                 )}
                 <div className="image-mode-badge">
                   {imagePreview?.mode === "live"
-                    ? "ImageRouter LIVE"
+                    ? "ImageRouter подключён"
                     : sourceImage
-                      ? "Source image / DEMO"
-                      : "Image DEMO"}
+                      ? "Исходное изображение · демо"
+                      : "Демо-изображение"}
                 </div>
               </div>
 
@@ -310,7 +312,7 @@ export function ProductCardStudio({
 
             {imagePreview?.mode === "live" && (
               <div className="generation-meta">
-                <span>ImageRouter generation</span>
+                <span>Генерация ImageRouter</span>
                 {typeof imagePreview.latency === "number" && (
                   <span>{(imagePreview.latency / 1000).toFixed(1)} сек.</span>
                 )}
