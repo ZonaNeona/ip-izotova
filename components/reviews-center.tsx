@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Bot,
@@ -50,15 +51,6 @@ type ChannelFilter = "all" | "wb" | "ozon";
 type StatusFilter = "all" | "waiting" | "answered";
 type RatingFilter = "all" | "negative" | "neutral" | "positive";
 type SortKey = "newest" | "rating" | "risk" | "status";
-type TrendMetric = "count" | "rating" | "negative" | "processed";
-
-const trendLabels: Record<TrendMetric, string> = {
-  count: "Количество отзывов",
-  rating: "Средний рейтинг",
-  negative: "Доля негатива",
-  processed: "Доля обработанных",
-};
-
 function pct(value: number) {
   return new Intl.NumberFormat("ru-RU", {
     maximumFractionDigits: 1,
@@ -85,171 +77,6 @@ function riskTone(value: string | null) {
   return "low";
 }
 
-function buildTrend(reviews: Review[], period: number) {
-  const days = new Map<
-    string,
-    { count: number; ratingSum: number; negative: number; answered: number }
-  >();
-
-  const now = new Date();
-  for (let offset = period - 1; offset >= 0; offset -= 1) {
-    const date = new Date(now);
-    date.setDate(now.getDate() - offset);
-    const key = date.toISOString().slice(0, 10);
-    days.set(key, { count: 0, ratingSum: 0, negative: 0, answered: 0 });
-  }
-
-  for (const review of reviews) {
-    const key = review.createdAt.slice(0, 10);
-    const row = days.get(key);
-    if (!row) continue;
-    row.count += 1;
-    row.ratingSum += review.rating;
-    if (review.rating <= 2) row.negative += 1;
-    if (review.status === "answered") row.answered += 1;
-  }
-
-  return [...days.entries()].map(([date, row]) => ({
-    date,
-    count: row.count,
-    rating: row.count ? row.ratingSum / row.count : 0,
-    negative: row.count ? (row.negative / row.count) * 100 : 0,
-    processed: row.count ? (row.answered / row.count) * 100 : 0,
-  }));
-}
-
-function ReviewTrendChart({
-  data,
-  metric,
-}: {
-  data: ReturnType<typeof buildTrend>;
-  metric: TrendMetric;
-}) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const width = 900;
-  const height = 250;
-  const paddingX = 16;
-  const paddingY = 20;
-  const values = data.map((row) => Number(row[metric]) || 0);
-  const max = Math.max(...values, metric === "rating" ? 5 : 1);
-  const min = metric === "rating" ? Math.min(...values.filter(Boolean), 3.5) : 0;
-  const span = Math.max(max - min, 1);
-
-  const points = values.map((value, index) => {
-    const x =
-      paddingX +
-      (index / Math.max(values.length - 1, 1)) * (width - paddingX * 2);
-    const y =
-      paddingY +
-      (1 - (value - min) / span) * (height - paddingY * 2);
-    return { x, y, value };
-  });
-
-  const polyline = points
-    .map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`)
-    .join(" ");
-  const fill = `${paddingX},${height - paddingY} ${polyline} ${width - paddingX},${height - paddingY}`;
-  const hoverPoint = hovered === null ? null : points[hovered];
-  const hoverRow = hovered === null ? null : data[hovered];
-
-  function formatValue(value: number) {
-    if (metric === "rating") return value.toFixed(2);
-    if (metric === "negative" || metric === "processed") return pct(value);
-    return new Intl.NumberFormat("ru-RU").format(Math.round(value));
-  }
-
-  return (
-    <div className="reviews-chart-wrap">
-      <div className="reviews-chart-stage">
-        <svg
-          className="reviews-chart"
-          viewBox={`0 0 ${width} ${height}`}
-          role="img"
-          onMouseLeave={() => setHovered(null)}
-          onMouseMove={(event) => {
-            if (!data.length) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const localX = event.clientX - rect.left;
-            const ratio = Math.max(
-              0,
-              Math.min(1, localX / Math.max(rect.width, 1)),
-            );
-            setHovered(Math.round(ratio * Math.max(data.length - 1, 0)));
-          }}
-        >
-          {[0.25, 0.5, 0.75].map((ratio) => (
-            <line
-              key={ratio}
-              x1="0"
-              x2={width}
-              y1={height * ratio}
-              y2={height * ratio}
-              className="reviews-gridline"
-            />
-          ))}
-          <polygon points={fill} className="reviews-area" />
-          <polyline points={polyline} className="reviews-line" />
-
-          {hoverPoint && (
-            <>
-              <line
-                x1={hoverPoint.x}
-                x2={hoverPoint.x}
-                y1={paddingY}
-                y2={height - paddingY}
-                className="reviews-hover-line"
-              />
-              <circle
-                cx={hoverPoint.x}
-                cy={hoverPoint.y}
-                r="5"
-                className="reviews-hover-dot"
-              />
-            </>
-          )}
-        </svg>
-
-        {hoverPoint && hoverRow && (
-          <div
-            className="reviews-chart-tooltip"
-            style={{
-              left: `${(hoverPoint.x / width) * 100}%`,
-              top: `${(hoverPoint.y / height) * 100}%`,
-            }}
-          >
-            <span>
-              {new Date(hoverRow.date).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })}
-            </span>
-            <strong>{formatValue(hoverPoint.value)}</strong>
-          </div>
-        )}
-      </div>
-
-      <div className="reviews-chart-axis">
-        <span>
-          {data[0]?.date
-            ? new Date(data[0].date).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })
-            : "—"}
-        </span>
-        <span>
-          {data.at(-1)?.date
-            ? new Date(data.at(-1)!.date).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })
-            : "—"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export function ReviewsCenter({
   onQueueChange,
 }: {
@@ -263,7 +90,6 @@ export function ReviewsCenter({
   const [rating, setRating] = useState<RatingFilter>("all");
   const [risk, setRisk] = useState("all");
   const [period, setPeriod] = useState(30);
-  const [trendMetric, setTrendMetric] = useState<TrendMetric>("count");
   const [sort, setSort] = useState<SortKey>("newest");
   const [descending, setDescending] = useState(true);
   const [page, setPage] = useState(1);
@@ -354,6 +180,7 @@ export function ReviewsCenter({
     return {
       total,
       avgRating: total ? ratingSum / total : 0,
+      negativeCount: negative,
       negativeShare: total ? (negative / total) * 100 : 0,
       answeredShare: total ? (answered.length / total) * 100 : 0,
       waiting,
@@ -365,10 +192,6 @@ export function ReviewsCenter({
     };
   }, [periodReviews]);
 
-  const trend = useMemo(
-    () => buildTrend(periodReviews, period),
-    [periodReviews, period],
-  );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
@@ -550,41 +373,6 @@ export function ReviewsCenter({
         </article>
       </section>
 
-      <section className="card reviews-overview">
-        <div className="reviews-overview-head">
-          <div>
-            <span className="eyebrow">Динамика обратной связи</span>
-            <h2>{trendLabels[trendMetric]}</h2>
-          </div>
-
-          <div className="reviews-periods">
-            {[7, 30, 90, 365].map((days) => (
-              <button
-                key={days}
-                className={period === days ? "active" : ""}
-                onClick={() => setPeriod(days)}
-              >
-                {days === 365 ? "1 год" : `${days} дней`}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="reviews-metric-tabs">
-          {(Object.keys(trendLabels) as TrendMetric[]).map((key) => (
-            <button
-              key={key}
-              className={trendMetric === key ? "active" : ""}
-              onClick={() => setTrendMetric(key)}
-            >
-              {trendLabels[key]}
-            </button>
-          ))}
-        </div>
-
-        <ReviewTrendChart data={trend} metric={trendMetric} />
-      </section>
-
       <section className="card reviews-list-card">
         <div className="reviews-toolbar">
           <div className="search-box reviews-search">
@@ -595,6 +383,17 @@ export function ReviewsCenter({
               placeholder="Товар, SKU, покупатель или текст отзыва"
             />
           </div>
+
+          <select
+            className="reviews-period-select"
+            value={period}
+            onChange={(event) => setPeriod(Number(event.target.value))}
+          >
+            <option value={7}>7 дней</option>
+            <option value={30}>30 дней</option>
+            <option value={90}>90 дней</option>
+            <option value={365}>1 год</option>
+          </select>
 
           <div className="reviews-channel-switch">
             {(["all", "wb", "ozon"] as ChannelFilter[]).map((value) => (
@@ -623,6 +422,19 @@ export function ReviewsCenter({
               </button>
             ))}
           </div>
+
+          <button
+            className={rating === "negative" ? "reviews-negative-quick active" : "reviews-negative-quick"}
+            onClick={() =>
+              setRating((current) =>
+                current === "negative" ? "all" : "negative",
+              )
+            }
+          >
+            <AlertTriangle size={14} />
+            Негативные
+            <span>{totals.negativeCount}</span>
+          </button>
 
           <select
             value={rating}
@@ -678,7 +490,7 @@ export function ReviewsCenter({
 
             {paginated.map((review) => (
               <div
-                className="reviews-row reviews-data-row"
+                className={`reviews-row reviews-data-row ${review.rating <= 2 ? "negative-review" : ""}`}
                 key={review.id}
                 role="button"
                 tabIndex={0}
@@ -728,7 +540,7 @@ export function ReviewsCenter({
                   </i>
                 </span>
 
-                <span className="reviews-stars">
+                <span className={review.rating <= 2 ? "reviews-stars negative" : "reviews-stars"}>
                   <strong>{review.rating.toFixed(1)}</strong>
                   <Star size={13} />
                 </span>
