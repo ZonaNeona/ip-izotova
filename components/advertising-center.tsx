@@ -481,7 +481,7 @@ export function AdvertisingCenter() {
         <article className="card ad-kpi">
           <span>Выручка с рекламы</span>
           <strong>{compactRub(total.revenue)}</strong>
-          <small>ROAS {total.roas.toFixed(2)}×</small>
+          <small>окупаемость рекламы {total.roas.toFixed(2)}×</small>
         </article>
         <article className="card ad-kpi">
           <span>ДРР</span>
@@ -626,12 +626,21 @@ export function AdvertisingCenter() {
               const changed = campaign.currentBid === campaign.recommendedBid;
 
               return (
-                <button
+                <div
                   className="ad-row ad-data-row"
                   key={campaign.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     setSelectedId(campaign.id);
                     setMessage(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedId(campaign.id);
+                      setMessage(null);
+                    }
                   }}
                 >
                   <span className="ad-product-cell">
@@ -700,7 +709,7 @@ export function AdvertisingCenter() {
                   <span className="ad-chevron">
                     <ChevronRight size={16} />
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -790,7 +799,7 @@ export function AdvertisingCenter() {
                   <strong>{rub(selectedStats.revenue)}</strong>
                 </div>
                 <div>
-                  <span>CTR</span>
+                  <span>Кликабельность</span>
                   <strong>{pct(selectedStats.ctr)}</strong>
                 </div>
                 <div>
