@@ -264,7 +264,17 @@ export async function GET(
         : null,
       action_payload: item.action_payload ?? {},
     })),
-    reviews: reviews ?? [],
+    reviews: (reviews ?? []).map((item) => {
+      const channel = channels.find(
+        (candidate) => candidate.id === item.product_channel_id,
+      );
+      return {
+        ...item,
+        channelCode: channel
+          ? channelDefById.get(channel.channel_id)?.code ?? null
+          : null,
+      };
+    }),
     competitors: competitorGroups.map(({ competitor, metrics }) => ({
       id: competitor.id,
       name: competitor.name,
